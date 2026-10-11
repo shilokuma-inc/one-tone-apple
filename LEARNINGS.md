@@ -38,3 +38,8 @@
 ## App Store Connect
 
 - iOS と macOS を 1 ターゲット・同じ Bundle ID で配信していても、App Store Connect の `appStoreVersions` は `platform`（`IOS` / `MAC_OS`）ごとに別で、説明文・スクリーンショットの置き場（`appStoreVersionLocalizations`）も別。`filter[platform]` を省くと iOS しか見えない（2026-10-05）
+
+## アプリアイコン（Tools/draw_app_icon.swift）
+
+- `Theme.textPrimary` のように SwiftUI の `Color` しか無い色も、`swiftc` で動かす CLI のスクリプトで `Color.resolve(in: EnvironmentValues()).cgColor` を使えば sRGB の値を取り出せる（`Theme.swift` に 16 進の定数を足さなくてよい。書き出した画素が #F2F2F7 そのままになることを確認）（2026-10-12）
+- Core Graphics で、画素の境目に乗らない同じ直線で接する 2 つの面を別々に塗ると、境目の 1 行がアンチエイリアスの重ね塗りで暗く濁る（例: 白の上半分と、水平線から下のシアンの半円）。下になる面を境目の向こうまで広げて塗り（半円なら円のまま）、上の面を最後に重ねる（2026-10-12）
