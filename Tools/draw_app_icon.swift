@@ -1,6 +1,7 @@
 // アプリアイコンを Core Graphics で描き、PNG に書き出す（Discussion #177）。
 // 「半円 + 5 本のバー」のモチーフを、白黒を基調にシアンを差し色にして描く。デザインは案（a / b / c）を引数で切り替える。
-// 角丸・影・余白は描かない（OS がマスクする）。正方形の全面を塗り、左右対称に描く。
+// 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。macOS 14 / 15 向けの角丸の画像は、.icon から Xcode が書き出す想定）。
+// 正方形の全面を塗り、左右対称に描く。
 // 色は ThemeColor.swift / Theme.swift の値をそのまま使う（一緒にコンパイルする）。
 //
 //   swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
@@ -112,14 +113,16 @@ enum IconDrawing {
         let geometry = variant.geometry
         switch variant {
         case .a:
-            // 上半分は白（代替アイコンでは差し色）、下半分は黒
+            // 上半分は白（代替アイコンでは差し色）、下半分は黒。水平線は画素の境目に乗らないので、水平線で接する面を
+            // 別々に塗ると境目の 1 行が暗く濁る。全面を黒で塗り、半円は円のまま塗ってから、上半分を最後に重ねる
+            // （円の上側は上半分に隠れる。bowlRadius < horizon なので円は上端からはみ出さない）
+            context.setFillColor(palette.dark)
+            context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+            context.setFillColor(palette.accent)
+            context.fillEllipse(in: CGRect(x: 0.5 - geometry.bowlRadius, y: geometry.horizon - geometry.bowlRadius,
+                                           width: geometry.bowlRadius * 2, height: geometry.bowlRadius * 2))
             context.setFillColor(palette.isAlternate ? palette.accent : palette.light)
             context.fill(CGRect(x: 0, y: 0, width: 1, height: geometry.horizon))
-            context.setFillColor(palette.dark)
-            context.fill(CGRect(x: 0, y: geometry.horizon, width: 1, height: 1 - geometry.horizon))
-            context.setFillColor(palette.accent)
-            context.addPath(geometry.bowl)
-            context.fillPath()
             context.setFillColor(palette.dark)
             for rect in geometry.barRects {
                 context.addPath(geometry.bar(rect))
