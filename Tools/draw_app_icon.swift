@@ -7,9 +7,11 @@
 //
 //   swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
 //   "$TMPDIR/draw_app_icon" <出力 PNG> [--size <px>] [--theme <ThemeColor の rawValue>]
+//   "$TMPDIR/draw_app_icon" OneTone/AppIcon.icon
 //
-// --size は一辺のピクセル数（既定 1024）。--theme を付けると、そのテーマ色の代替アイコンの塗り方で描く（付けなければ既定のアイコン）。
+// PNG: --size は一辺のピクセル数（既定 1024）。--theme を付けると、そのテーマ色の代替アイコンの塗り方で描く（付けなければ既定のアイコン）。
 // 出力はアルファ無しの RGB（App Store Connect はアルファ付きのアイコンを受け付けない）。
+// .icon: 既定のアプリアイコン（Icon Composer の形式）を作り直す。レイヤーは SVG で、旧 OS 向けの画像はビルド時に Xcode が書き出す。
 
 import CoreGraphics
 import Foundation
@@ -111,13 +113,122 @@ enum IconDrawing {
     }
 }
 
+/// Icon Composer の `.icon`（`icon.json` と、`Assets/` に置くレイヤーの SVG）。
+/// 奥から半円・両側のバー・中央のバーの 3 つのグループに分け、Liquid Glass で奥行きが付くようにする
+enum IconComposerFile {
+    /// SVG のキャンバスの一辺。Icon Composer の正方形のアイコンは 1024pt
+    static let canvas: CGFloat = 1024
+
+    /// レイヤー（名前と SVG）。前面から順に並べる（`icon.json` の `groups` は先頭が最前面）
+    static func layers(palette: Palette) -> [(name: String, svg: String)] {
+        let rects = Geometry.barRects
+        let sideBars = rects.indices.filter { $0 != 2 }.map { rect(rects[$0], color: palette.light) }
+        return [
+            ("bar-center", svg([rect(rects[2], color: palette.accent)])),
+            ("bars", svg(sideBars)),
+            ("bowl", svg([bowl(color: palette.light)])),
+        ]
+    }
+
+    static func write(to url: URL, palette: Palette) throws {
+        let assets = url.appendingPathComponent("Assets")
+        try? FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
+        let layers = layers(palette: palette)
+        for layer in layers {
+            try Data(layer.svg.utf8).write(to: assets.appendingPathComponent("\(layer.name).svg"))
+        }
+        let groups: [[String: Any]] = layers.map { layer in
+            ["layers": [["image-name": "\(layer.name).svg", "name": layer.name]]]
+        }
+        let background = ["solid": srgb(palette.dark)]
+        let json: [String: Any] = [
+            // ダークでも背景はライトと同じ暗色にする（指定しないと、システムがライトより明るい灰色のグラデーションに置き換える）
+            "fill-specializations": [["value": background], ["appearance": "dark", "value": background]],
+            "groups": groups,
+            "supported-platforms": ["squares": "shared"],
+        ]
+        var data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        data.append(Data("\n".utf8))
+        try data.write(to: url.appendingPathComponent("icon.json"))
+    }
+
+    static func svg(_ elements: [String]) -> String {
+        let size = number(canvas)
+        return """
+        <svg xmlns="http://www.w3.org/2000/svg" width="\(size)" height="\(size)" viewBox="0 0 \(size) \(size)">
+        \(elements.map { "  \($0)" }.joined(separator: "\n"))
+        </svg>
+
+        """
+    }
+
+    static func rect(_ rect: CGRect, color: CGColor) -> String {
+        "<rect x=\"\(number(rect.minX * canvas))\" y=\"\(number(rect.minY * canvas))\" width=\"\(number(rect.width * canvas))\" "
+            + "height=\"\(number(rect.height * canvas))\" rx=\"\(number(Geometry.lineWidth / 2 * canvas))\" fill=\"\(hex(color))\"/>"
+    }
+
+    /// 半円の輪郭。線（stroke）で書くと Liquid Glass の描画で円弧の両端と下端を結ぶ斜めの線が見えるので、
+    /// 外側の円弧・右端の丸・内側の円弧・左端の丸をつないだ塗りの形で書く。
+    /// 円弧は 90° ずつに分けて左右対称の点だけを通す（SVG の y は下向きで、sweep 1 が画面上の時計回り）
+    static func bowl(color: CGColor) -> String {
+        let center = 0.5 * canvas
+        let horizon = Geometry.horizon * canvas
+        let radius = Geometry.bowlRadius * canvas
+        let cap = Geometry.lineWidth / 2 * canvas
+        let outer = radius + cap
+        let inner = radius - cap
+        func arc(_ arcRadius: CGFloat, sweep: Int, to x: CGFloat, _ y: CGFloat) -> String {
+            "A\(number(arcRadius)) \(number(arcRadius)) 0 0 \(sweep) \(number(x)) \(number(y))"
+        }
+        let path = [
+            "M\(number(center - outer)) \(number(horizon))",
+            arc(outer, sweep: 0, to: center, horizon + outer),
+            arc(outer, sweep: 0, to: center + outer, horizon),
+            arc(cap, sweep: 0, to: center + radius, horizon - cap),
+            arc(cap, sweep: 0, to: center + inner, horizon),
+            arc(inner, sweep: 1, to: center, horizon + inner),
+            arc(inner, sweep: 1, to: center - inner, horizon),
+            arc(cap, sweep: 0, to: center - radius, horizon - cap),
+            arc(cap, sweep: 0, to: center - outer, horizon),
+            "Z",
+        ].joined(separator: " ")
+        return "<path d=\"\(path)\" fill=\"\(hex(color))\"/>"
+    }
+
+    /// 小数 2 桁までの数（末尾の 0 は省く）
+    static func number(_ value: CGFloat) -> String {
+        var text = String(format: "%.2f", value)
+        while text.hasSuffix("0") { text.removeLast() }
+        if text.hasSuffix(".") { text.removeLast() }
+        return text
+    }
+
+    /// sRGB の色の 8bit ずつの値
+    static func components(_ color: CGColor) -> [Int] {
+        let srgb = color.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil) ?? color
+        return (srgb.components ?? []).prefix(3).map { Int(($0 * 255).rounded()) }
+    }
+
+    /// SVG の色（#RRGGBB）
+    static func hex(_ color: CGColor) -> String {
+        "#" + components(color).map { String(format: "%02X", $0) }.joined()
+    }
+
+    /// `icon.json` の色（Icon Composer と同じ srgb:r,g,b,a の形）
+    static func srgb(_ color: CGColor) -> String {
+        "srgb:" + (components(color).map { String(format: "%.5f", Double($0) / 255) } + ["1.00000"]).joined(separator: ",")
+    }
+}
+
 @main
 struct DrawAppIcon {
     static func main() {
         var arguments = Array(CommandLine.arguments.dropFirst())
         let usage = "使い方: draw_app_icon <出力 PNG> [--size <px>] "
-            + "[--theme <\(ThemeColor.allCases.map(\.rawValue).joined(separator: "|"))>]"
-        var size = 1024
+            + "[--theme <\(ThemeColor.allCases.map(\.rawValue).joined(separator: "|"))>]\n"
+            + "       draw_app_icon <出力 .icon>"
+        var size: Int?
         var theme: ThemeColor?
         while let index = arguments.firstIndex(where: { $0.hasPrefix("--") }) {
             guard index + 1 < arguments.count else { fail(usage) }
@@ -137,7 +248,17 @@ struct DrawAppIcon {
         guard arguments.count == 1 else { fail(usage) }
         let output = URL(fileURLWithPath: arguments[0])
 
-        guard let image = IconDrawing.image(palette: Palette(theme: theme), size: size),
+        if output.pathExtension == "icon" {
+            guard size == nil, theme == nil else { fail("--size と --theme は PNG の書き出しにだけ使えます\n\(usage)") }
+            do {
+                try IconComposerFile.write(to: output, palette: Palette(theme: nil))
+            } catch {
+                fail("\(output.path) に書き出せませんでした: \(error)")
+            }
+            print(output.path)
+            return
+        }
+        guard let image = IconDrawing.image(palette: Palette(theme: theme), size: size ?? 1024),
               let destination = CGImageDestinationCreateWithURL(output as CFURL, UTType.png.identifier as CFString, 1, nil) else {
             fail("\(output.path) に書き出せませんでした")
         }
