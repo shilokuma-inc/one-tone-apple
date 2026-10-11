@@ -29,13 +29,13 @@ enum Variant: String, CaseIterable {
         switch self {
         case .a:
             Geometry(horizon: 0.475, bowlRadius: 0.31, barWidth: 0.064, barGap: 0.05,
-                     barLengths: (outer: 0.2, inner: 0.36, center: 0.52), barCenterOffset: 0)
+                     barLengths: (outer: 0.2, inner: 0.36, center: 0.52))
         case .b:
             Geometry(horizon: 0.435, bowlRadius: 0.33, barWidth: 0.06, barGap: 0.05,
-                     barLengths: (outer: 0.18, inner: 0.32, center: 0.46), barCenterOffset: 0)
+                     barLengths: (outer: 0.18, inner: 0.32, center: 0.46))
         case .c:
             Geometry(horizon: 0.475, bowlRadius: 0.32, barWidth: 0.07, barGap: 0.05,
-                     barLengths: (outer: 0.22, inner: 0.38, center: 0.54), barCenterOffset: 0)
+                     barLengths: (outer: 0.22, inner: 0.38, center: 0.54))
         }
     }
 }
@@ -52,19 +52,17 @@ struct Geometry {
     var barGap: CGFloat
     /// バーの長さ。外側・内側・中央の 3 つを書き、左右に折り返して 5 本にする（左右対称にするため）
     var barLengths: (outer: CGFloat, inner: CGFloat, center: CGFloat)
-    /// バーの縦の中心を水平線からずらす量（下が正）
-    var barCenterOffset: CGFloat
 
-    /// 左から順に 5 本のバーの矩形
+    /// 左から順に 5 本のバーの矩形。縦は水平線を中心にする
     var barRects: [CGRect] {
         let lengths = [barLengths.outer, barLengths.inner, barLengths.center, barLengths.inner, barLengths.outer]
         return lengths.enumerated().map { index, length in
             let centerX = 0.5 + CGFloat(index - 2) * (barWidth + barGap)
-            return CGRect(x: centerX - barWidth / 2, y: horizon + barCenterOffset - length / 2, width: barWidth, height: length)
+            return CGRect(x: centerX - barWidth / 2, y: horizon - length / 2, width: barWidth, height: length)
         }
     }
 
-    /// 水平線から下の半円の円弧（左端から右端へ）
+    /// 水平線から下の半円の円弧
     var bowlArc: CGPath {
         let path = CGMutablePath()
         // y が下向きの座標なので、角度 0 → π は右端から下を通って左端へ回る
