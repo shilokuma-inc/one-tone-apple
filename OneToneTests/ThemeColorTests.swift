@@ -92,7 +92,7 @@ final class ThemeColorTests: XCTestCase {
     }
 
     func testAlternateIconNamesMatchAssetCatalog() {
-        // Asset Catalog の AppIcon-<rawValue>.appiconset と、ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES の名前
+        // OneTone/AppIcon-<rawValue>.icon と、ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES の名前
         XCTAssertEqual(ThemeColor.cyan.alternateIconName, "AppIcon-cyan")
         let names = ThemeColor.allCases.map(\.alternateIconName)
         XCTAssertEqual(Set(names).count, names.count)
