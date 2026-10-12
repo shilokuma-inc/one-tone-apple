@@ -69,6 +69,47 @@ xcodebuild test -project OneTone.xcodeproj -scheme OneTone -destination 'platfor
 - App Store に載せる言語は `AppStore/languages.json`（12 言語、主言語は ja）。説明文は `AppStore/metadata/<言語>.json`。
   App Store Connect に無い言語へ反映するときは、ワークフローを `missing_locales: create` で実行する
 
+## アプリアイコン
+
+既定のアイコン（iOS / macOS）と iOS の代替アイコン（テーマ色ごとの 8 個）は、どちらも Icon Composer の `.icon` で、**コードで描いて書き出す**（Discussion #177）。
+元データは描画スクリプトで、`.icon` はその書き出し。PNG を手で描いたり直したりしない。
+
+| もの | 場所 |
+| --- | --- |
+| 描画スクリプト（寸法は `Geometry`、色は `Palette`。色は `Theme.swift` / `ThemeColor.swift` を一緒にコンパイルして使う） | `Tools/draw_app_icon.swift` |
+| 既定のアイコン | `OneTone/AppIcon.icon`（`icon.json` と `Assets/` のレイヤーの SVG） |
+| 代替アイコン（iOS だけ） | `OneTone/AppIcon-<ThemeColor の rawValue>.icon` |
+
+```bash
+swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
+"$TMPDIR/draw_app_icon" --all OneTone                                  # .icon を既定・代替とも作り直す
+"$TMPDIR/draw_app_icon" "$TMPDIR/pink.png" --theme pink --size 1024    # 見た目の確認用の PNG（コミットしない）
+```
+
+- 見た目を変えるときはスクリプトの定数を直して `--all` を流し直す。`.icon` の `icon.json` や SVG は手で編集せず、Icon Composer で開いて保存もしない（保存すると `icon.json` が書き換わり、スクリプトの出力とずれる）
+- 既定のアイコンは白い線（`Theme.textPrimary`）の半円と 5 本のバーで、中央のバーだけシアン。代替アイコンは線をすべてテーマ色にする（代替の Cyan と既定が同じに見えないように）。
+  背景はどちらも `Theme.background` で、ダークでも同じ（`fill-specializations`）。ティント・クリアはシステムの単色化に任せる
+- 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする）。iOS 26 / macOS 26 より前の OS 向けの画像は、ビルド時に Xcode が `.icon` から書き出す
+  （iOS は `AppIcon60x60@2x.png` と `Assets.car` のライト / ダーク / ティント、macOS は角丸・余白の付いた `AppIcon.icns`）
+- 見た目の確認は、Icon Composer に入っている `ictool` で画像にする（`Xcode.app/Contents/Developer/usr/bin/ictool` は別物で `--export-image` が無い）。
+  `--platform` は `iOS` / `macOS`、`--rendition` は `Default` / `Dark` / `TintedLight` / `TintedDark` / `ClearLight` / `ClearDark`
+  ```bash
+  "/Applications/Xcode.app/Contents/Applications/Icon Composer.app/Contents/Executables/ictool" OneTone/AppIcon.icon \
+    --export-image --output-file out.png --platform iOS --rendition Default --width 1024 --height 1024 --scale 1
+  ```
+- 組み込みの確認は、ビルド成果物の `Assets.car` を `xcrun assetutil --info <…>.app/Assets.car`（macOS は `Contents/Resources/Assets.car`）で見て
+  `AppIcon` と `AppIcon-<色>` の rendition があること、iOS は `plutil -p <…>.app/Info.plist` の `CFBundleIcons` / `CFBundleAlternateIcons` に 8 色の名前があることを見る
+  （`xcrun actool` で直接コンパイルしても見られる。`LEARNINGS.md` の「アプリアイコン」）
+- 代替アイコンの名前（`AppIcon-<rawValue>`）と既定の `AppIcon` は変えない。ユーザーの選択が `UIApplication.alternateIconName` に名前で残っているので、変えるとアップデート後に選択が外れる
+
+### テーマ色を足したとき
+
+1. `ThemeColor` に case を足し、`--all` を流し直す（`OneTone/AppIcon-<rawValue>.icon` ができる）
+2. `project.pbxproj` に新しい `.icon` の PBXFileReference（`lastKnownFileType = folder.iconcomposer.icon`）・PBXBuildFile・`OneTone` グループ・Resources を足す
+   （このプロジェクトは同期フォルダではないので、置くだけではターゲットに入らない。ID は既存と重ならない 24 桁の 16 進数）
+3. ビルド設定の `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]`（Debug / Release の 2 か所）に `AppIcon-<rawValue>` を足す
+4. iOS のビルド成果物の `Info.plist` の `CFBundleAlternateIcons` に入ったこと、設定画面の APP ICON から選べることを確かめる
+
 ## ブランチ運用・規約
 
 - 通常のフィーチャーブランチは `develop` 起点で切る。ralph-loop の作業ブランチは `epic/**` 起点で切り、PR もその epic 宛てに出す
