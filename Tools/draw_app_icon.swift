@@ -1,8 +1,8 @@
-// アプリアイコンを Core Graphics で描き、PNG に書き出す（Discussion #177）。
+// アプリアイコンをコードで描き、Icon Composer の .icon（レイヤーの SVG と icon.json）に書き出す（Discussion #177）。確認用に Core Graphics で PNG にも描ける。
 // 「半円 + 5 本のバー」のモチーフを、白黒を基調にシアンを差し色にして描く（PR #179 で 3 案から選んだ案B「ライン」）。
 // 全面をアプリの背景と同じ暗色にし、半円は輪郭だけの線、バーは線で描く。線は白で、中央のバーだけシアン。
 // 代替アイコン（iOS だけ）は同じデザインの色違いで、線をすべてテーマ色にする（既定のアイコンとは塗り分けが違うので、代替の Cyan と既定は同じに見えない）。
-// 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。iOS 18 / macOS 13〜15 向けの画像は、.icon から Xcode がビルド時に書き出す）。
+// 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。iOS 26 / macOS 26 より前の OS 向けの画像は、.icon から Xcode がビルド時に書き出す）。
 // 正方形の全面を塗り、左右対称に描く。
 // 色は ThemeColor.swift / Theme.swift の値をそのまま使う（一緒にコンパイルする）。
 //
@@ -11,7 +11,7 @@
 //   "$TMPDIR/draw_app_icon" <出力 .icon | 出力 PNG> [--theme <ThemeColor の rawValue>] [--size <px>（PNG だけ）]
 //
 // --all: 既定のアイコン OneTone/AppIcon.icon と、テーマ色ごとの代替アイコン OneTone/AppIcon-<rawValue>.icon をすべて作り直す（Icon Composer の形式。
-// レイヤーは SVG）。テーマ色を足したら実行し直し、project.pbxproj に .icon を足して ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES にも名前を足す。
+// レイヤーは SVG）。.icon は手で編集せず（Icon Composer で開いて保存もしない）、ここを直して作り直す。テーマ色を足したときの手順は CLAUDE.md の「アプリアイコン」。
 // .icon / PNG: 1 つだけ書き出す。--theme を付けるとそのテーマ色の代替アイコン、付けなければ既定のアイコン。
 // PNG は見た目の確認用で、--size は一辺のピクセル数（既定 1024）。出力はアルファ無しの RGB。
 
