@@ -6,8 +6,6 @@ on:
       - '**'
       - '!main'
       - '!develop'
-      # assets/** は PR 用スクリーンショットの置き場でアプリのコードを含まないため除外する
-      - '!assets/**'
 
 concurrency:
   group: build-working-${{ github.ref }}
