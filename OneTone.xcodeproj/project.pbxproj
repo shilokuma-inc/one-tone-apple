@@ -10,6 +10,7 @@
 		4F35649D2C04ED720015F5B5 /* OneToneApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F35649C2C04ED720015F5B5 /* OneToneApp.swift */; };
 		4F35649F2C04ED720015F5B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F35649E2C04ED720015F5B5 /* ContentView.swift */; };
 		4F3564A12C04ED730015F5B5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F3564A02C04ED730015F5B5 /* Assets.xcassets */; };
+		3A7C1E5B9D2F4A6C8E0B1D01 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3A7C1E5B9D2F4A6C8E0B1D02 /* AppIcon.icon */; };
 		4F3564A42C04ED730015F5B5 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F3564A32C04ED730015F5B5 /* Preview Assets.xcassets */; };
 		4F3564AF2C04ED740015F5B5 /* OneToneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3564AE2C04ED740015F5B5 /* OneToneTests.swift */; };
 		4F3564B92C04ED740015F5B5 /* OneToneUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3564B82C04ED740015F5B5 /* OneToneUITests.swift */; };
@@ -72,6 +73,7 @@
 		4F35649C2C04ED720015F5B5 /* OneToneApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneToneApp.swift; sourceTree = "<group>"; };
 		4F35649E2C04ED720015F5B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		4F3564A02C04ED730015F5B5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3A7C1E5B9D2F4A6C8E0B1D02 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4F3564A32C04ED730015F5B5 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		4F3564A52C04ED730015F5B5 /* OneTone.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OneTone.entitlements; sourceTree = "<group>"; };
 		4F3564AA2C04ED740015F5B5 /* OneToneTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OneToneTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -188,6 +190,7 @@
 				4F35649E2C04ED720015F5B5 /* ContentView.swift */,
 				4F3564C72C04F2110015F5B5 /* AudioManager.swift */,
 				4F3564A02C04ED730015F5B5 /* Assets.xcassets */,
+				3A7C1E5B9D2F4A6C8E0B1D02 /* AppIcon.icon */,
 				9C4E2A7B1D3F5B6A8C0E2F02 /* Localizable.xcstrings */,
 				4F3564A52C04ED730015F5B5 /* OneTone.entitlements */,
 				4F3564A22C04ED730015F5B5 /* Preview Content */,
@@ -352,6 +355,7 @@
 			files = (
 				4F3564A42C04ED730015F5B5 /* Preview Assets.xcassets in Resources */,
 				4F3564A12C04ED730015F5B5 /* Assets.xcassets in Resources */,
+				3A7C1E5B9D2F4A6C8E0B1D01 /* AppIcon.icon in Resources */,
 				9C4E2A7B1D3F5B6A8C0E2F01 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
