@@ -1,0 +1,44 @@
+{
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "srgb:0.03922,0.03922,0.05882,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "srgb:0.03922,0.03922,0.05882,1.00000"
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "bar-center.svg",
+          "name" : "bar-center"
+        }
+      ]
+    },
+    {
+      "layers" : [
+        {
+          "image-name" : "bars.svg",
+          "name" : "bars"
+        }
+      ]
+    },
+    {
+      "layers" : [
+        {
+          "image-name" : "bowl.svg",
+          "name" : "bowl"
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}

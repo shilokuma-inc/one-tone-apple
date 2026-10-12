@@ -1,17 +1,19 @@
 // アプリアイコンを Core Graphics で描き、PNG に書き出す（Discussion #177）。
 // 「半円 + 5 本のバー」のモチーフを、白黒を基調にシアンを差し色にして描く（PR #179 で 3 案から選んだ案B「ライン」）。
 // 全面をアプリの背景と同じ暗色にし、半円は輪郭だけの線、バーは線で描く。線は白で、中央のバーだけシアン。
-// 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。macOS 14 / 15 向けの角丸の画像は、.icon から Xcode が書き出す想定）。
+// 代替アイコン（iOS だけ）は同じデザインの色違いで、線をすべてテーマ色にする（既定のアイコンとは塗り分けが違うので、代替の Cyan と既定は同じに見えない）。
+// 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。iOS 18 / macOS 13〜15 向けの画像は、.icon から Xcode がビルド時に書き出す）。
 // 正方形の全面を塗り、左右対称に描く。
 // 色は ThemeColor.swift / Theme.swift の値をそのまま使う（一緒にコンパイルする）。
 //
 //   swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
-//   "$TMPDIR/draw_app_icon" <出力 PNG> [--size <px>] [--theme <ThemeColor の rawValue>]
-//   "$TMPDIR/draw_app_icon" OneTone/AppIcon.icon
+//   "$TMPDIR/draw_app_icon" --all OneTone
+//   "$TMPDIR/draw_app_icon" <出力 .icon | 出力 PNG> [--theme <ThemeColor の rawValue>] [--size <px>（PNG だけ）]
 //
-// PNG: --size は一辺のピクセル数（既定 1024）。--theme を付けると、そのテーマ色の代替アイコンの塗り方で描く（付けなければ既定のアイコン）。
-// 出力はアルファ無しの RGB（App Store Connect はアルファ付きのアイコンを受け付けない）。
-// .icon: 既定のアプリアイコン（Icon Composer の形式）を作り直す。レイヤーは SVG で、旧 OS 向けの画像はビルド時に Xcode が書き出す。
+// --all: 既定のアイコン OneTone/AppIcon.icon と、テーマ色ごとの代替アイコン OneTone/AppIcon-<rawValue>.icon をすべて作り直す（Icon Composer の形式。
+// レイヤーは SVG）。テーマ色を足したら実行し直し、project.pbxproj に .icon を足して ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES にも名前を足す。
+// .icon / PNG: 1 つだけ書き出す。--theme を付けるとそのテーマ色の代替アイコン、付けなければ既定のアイコン。
+// PNG は見た目の確認用で、--size は一辺のピクセル数（既定 1024）。出力はアルファ無しの RGB。
 
 import CoreGraphics
 import Foundation
@@ -59,22 +61,20 @@ enum Geometry {
     }
 }
 
-/// 塗りに使う色。既定のアイコンは白黒にシアン、代替アイコンはテーマ色を差し色にする
+/// 塗りに使う色。既定のアイコンは白い線に中央のバーだけシアン、代替アイコンは線をすべてテーマ色にする
 struct Palette {
-    /// 白（Theme.textPrimary）
-    var light: CGColor
-    /// 黒（Theme.background）
-    var dark: CGColor
-    /// 差し色（テーマ色）
+    /// 背景（Theme.background）
+    var background: CGColor
+    /// 半円と両側のバーの線。既定のアイコンは白（Theme.textPrimary）、代替アイコンはテーマ色
+    var line: CGColor
+    /// 中央のバー（テーマ色。既定のアイコンはシアン）
     var accent: CGColor
-    /// 代替アイコンの塗り方にするか
-    var isAlternate: Bool
 
+    /// theme が nil なら既定のアイコン、テーマ色を渡すとその色の代替アイコンの色
     init(theme: ThemeColor?) {
-        light = Self.cgColor(Theme.textPrimary)
-        dark = Self.cgColor(Theme.background)
+        background = Self.cgColor(Theme.background)
         accent = Self.cgColor((theme ?? .default).accent)
-        isAlternate = theme != nil
+        line = theme == nil ? Self.cgColor(Theme.textPrimary) : accent
     }
 
     static func cgColor(_ color: Color) -> CGColor {
@@ -83,18 +83,17 @@ struct Palette {
 }
 
 enum IconDrawing {
-    /// 一辺 1 の座標（y は下向き）に描く。既定のアイコンは白い線に中央のバーだけ差し色、代替アイコンは線をすべて差し色にする
+    /// 一辺 1 の座標（y は下向き）に描く
     static func draw(palette: Palette, in context: CGContext) {
-        let line = palette.isAlternate ? palette.accent : palette.light
-        context.setFillColor(palette.dark)
+        context.setFillColor(palette.background)
         context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
-        context.setStrokeColor(line)
+        context.setStrokeColor(palette.line)
         context.setLineWidth(Geometry.lineWidth)
         context.setLineCap(.round)
         context.addPath(Geometry.bowlArc)
         context.strokePath()
         for (index, rect) in Geometry.barRects.enumerated() {
-            context.setFillColor(index == 2 ? palette.accent : line)
+            context.setFillColor(index == 2 ? palette.accent : palette.line)
             context.addPath(Geometry.bar(rect))
             context.fillPath()
         }
@@ -122,11 +121,11 @@ enum IconComposerFile {
     /// レイヤー（名前と SVG）。前面から順に並べる（`icon.json` の `groups` は先頭が最前面）
     static func layers(palette: Palette) -> [(name: String, svg: String)] {
         let rects = Geometry.barRects
-        let sideBars = rects.indices.filter { $0 != 2 }.map { rect(rects[$0], color: palette.light) }
+        let sideBars = rects.indices.filter { $0 != 2 }.map { rect(rects[$0], color: palette.line) }
         return [
             ("bar-center", svg([rect(rects[2], color: palette.accent)])),
             ("bars", svg(sideBars)),
-            ("bowl", svg([bowl(color: palette.light)])),
+            ("bowl", svg([bowl(color: palette.line)])),
         ]
     }
 
@@ -141,7 +140,7 @@ enum IconComposerFile {
         let groups: [[String: Any]] = layers.map { layer in
             ["layers": [["image-name": "\(layer.name).svg", "name": layer.name]]]
         }
-        let background = ["solid": srgb(palette.dark)]
+        let background = ["solid": srgb(palette.background)]
         let json: [String: Any] = [
             // ダークでも背景はライトと同じ暗色にする（指定しないと、システムがライトより明るい灰色のグラデーションに置き換える）
             "fill-specializations": [["value": background], ["appearance": "dark", "value": background]],
@@ -225,11 +224,12 @@ enum IconComposerFile {
 struct DrawAppIcon {
     static func main() {
         var arguments = Array(CommandLine.arguments.dropFirst())
-        let usage = "使い方: draw_app_icon <出力 PNG> [--size <px>] "
-            + "[--theme <\(ThemeColor.allCases.map(\.rawValue).joined(separator: "|"))>]\n"
-            + "       draw_app_icon <出力 .icon>"
+        let usage = "使い方: draw_app_icon --all <OneTone のディレクトリ>\n"
+            + "       draw_app_icon <出力 .icon | 出力 PNG> [--theme <\(ThemeColor.allCases.map(\.rawValue).joined(separator: "|"))>] "
+            + "[--size <px>（PNG だけ）]"
         var size: Int?
         var theme: ThemeColor?
+        var allDirectory: URL?
         while let index = arguments.firstIndex(where: { $0.hasPrefix("--") }) {
             guard index + 1 < arguments.count else { fail(usage) }
             let value = arguments[index + 1]
@@ -240,22 +240,29 @@ struct DrawAppIcon {
             case "--theme":
                 guard let parsed = ThemeColor(rawValue: value) else { fail("知らないテーマ色です: \(value)\n\(usage)") }
                 theme = parsed
+            case "--all":
+                allDirectory = URL(fileURLWithPath: value)
             default:
                 fail(usage)
             }
             arguments.removeSubrange(index...(index + 1))
         }
+
+        if let allDirectory {
+            guard arguments.isEmpty, size == nil, theme == nil else { fail(usage) }
+            // 既定のアイコンの名前は ASSETCATALOG_COMPILER_APPICON_NAME、代替アイコンの名前は ThemeColor.alternateIconName と同じにする
+            let icons: [(name: String, theme: ThemeColor?)] = [("AppIcon", nil)] + ThemeColor.allCases.map { ($0.alternateIconName, $0) }
+            for icon in icons {
+                writeIcon(to: allDirectory.appendingPathComponent("\(icon.name).icon"), theme: icon.theme)
+            }
+            return
+        }
         guard arguments.count == 1 else { fail(usage) }
         let output = URL(fileURLWithPath: arguments[0])
 
         if output.pathExtension == "icon" {
-            guard size == nil, theme == nil else { fail("--size と --theme は PNG の書き出しにだけ使えます\n\(usage)") }
-            do {
-                try IconComposerFile.write(to: output, palette: Palette(theme: nil))
-            } catch {
-                fail("\(output.path) に書き出せませんでした: \(error)")
-            }
-            print(output.path)
+            guard size == nil else { fail("--size は PNG の書き出しにだけ使えます\n\(usage)") }
+            writeIcon(to: output, theme: theme)
             return
         }
         guard let image = IconDrawing.image(palette: Palette(theme: theme), size: size ?? 1024),
@@ -265,6 +272,15 @@ struct DrawAppIcon {
         CGImageDestinationAddImage(destination, image, nil)
         guard CGImageDestinationFinalize(destination) else { fail("\(output.path) に書き出せませんでした") }
         print(output.path)
+    }
+
+    static func writeIcon(to url: URL, theme: ThemeColor?) {
+        do {
+            try IconComposerFile.write(to: url, palette: Palette(theme: theme))
+        } catch {
+            fail("\(url.path) に書き出せませんでした: \(error)")
+        }
+        print(url.path)
     }
 
     static func fail(_ message: String) -> Never {
