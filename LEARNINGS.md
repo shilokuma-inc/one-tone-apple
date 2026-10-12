@@ -38,3 +38,15 @@
 ## App Store Connect
 
 - iOS と macOS を 1 ターゲット・同じ Bundle ID で配信していても、App Store Connect の `appStoreVersions` は `platform`（`IOS` / `MAC_OS`）ごとに別で、説明文・スクリーンショットの置き場（`appStoreVersionLocalizations`）も別。`filter[platform]` を省くと iOS しか見えない（2026-10-05）
+
+## アプリアイコン（Tools/draw_app_icon.swift）
+
+- `Theme.textPrimary` のように SwiftUI の `Color` しか無い色も、`swiftc` で動かす CLI のスクリプトで `Color.resolve(in: EnvironmentValues()).cgColor` を使えば sRGB の値を取り出せる（`Theme.swift` に 16 進の定数を足さなくてよい。書き出した画素が #F2F2F7 そのままになることを確認）（2026-10-12）
+- Core Graphics で、画素の境目に乗らない同じ直線で接する 2 つの面を別々に塗ると、境目の 1 行にアンチエイリアスの重ね塗りで下地の色が透けて濁る（デザイン案を 3 案出したとき、黒の下地に白の上半分と水平線から下のシアンの半円を塗った案で、境目に暗い線が出た）。下になる面を境目の向こうまで広げて塗り（半円なら円のまま）、上の面を最後に重ねる（2026-10-12）
+- 半円の線を端から端へ 1 本の円弧で描くと、16px 前後に小さく書き出したときに左右でアンチエイリアスがずれる（左右の差が最大 42/255）。下端から両端へ 2 本の円弧に分け、1 つのパスにまとめて 1 回で線を引くと、15px 以上（アイコンで使う最小の 16px を含む）では左右の差が 1/255 に収まる（2026-10-12）
+- Xcode 26.6 の `Xcode.app/Contents/Developer/usr/bin/ictool` は actool と同じ引数を取るもので、`--export-image` を受け付けない（`Unknown argument`）。`.icon` を画像に書き出すのは Icon Composer に入っている `Xcode.app/Contents/Applications/Icon Composer.app/Contents/Executables/ictool`（2026-10-12）
+- `.icon` のレイヤーの SVG に線（`stroke`）の円弧を書くと、Liquid Glass の描画で円弧の始点と終点を結ぶ斜めの線がうっすら出る。外側の円弧・端の丸・内側の円弧をつないだ塗りの形で書くと出ない（2026-10-12）
+- `.icon` の背景（`fill`）がほぼ黒でも、ダークではシステムが灰色のグラデーション（#313131 前後）に置き換え、ライトより明るくなる。ライトと同じにするなら、`fill-specializations` に `"appearance" : "dark"` で同じ色を書く（2026-10-12）
+- このプロジェクトの `project.pbxproj` は同期フォルダではないので、`.icon` は PBXFileReference（`lastKnownFileType = folder.iconcomposer.icon`）・PBXBuildFile・グループ・Resources に足す。足せば `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` のまま `.icon` が使われ、`Assets.xcassets` の代替アイコンとも同居できる（Info.plist の `CFBundleAlternateIcons` に 8 色が残る）。旧 OS 向けに、iOS は `AppIcon60x60@2x.png` と `Assets.car` のライト / ダーク / ティントの画像、macOS は角丸・余白・影の付いた `AppIcon.icns` が書き出される（2026-10-12）
+- `.icon` は iOS の代替アイコンにも使える。`AppIcon-<名前>.icon` を足して（PBXFileReference などは既定の `.icon` と同じ）`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` に名前を書くと、iOS 18 向けにもライト / ダーク / ティントの画像が書き出され、`Info.plist` の `CFBundleAlternateIcons` に入る。macOS のビルドでは、代替の `.icon` は `Assets.car` に入らない（サイズも変わらない）（2026-10-12）
+- アイコンの組み込みは、`xcodebuild` を通さなくても `xcrun actool OneTone/Assets.xcassets OneTone/AppIcon.icon OneTone/AppIcon-*.icon --compile <出力> --platform iphonesimulator --minimum-deployment-target 18.0 --target-device iphone --target-device ipad --app-icon AppIcon --alternate-app-icon AppIcon-<色>（色の数だけ） --output-partial-info-plist <出力>/partial.plist` でコンパイルし、`xcrun assetutil --info <出力>/Assets.car` と `partial.plist` で確かめられる（2026-10-12）
