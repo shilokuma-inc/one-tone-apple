@@ -96,14 +96,12 @@ struct ContentView: View {
         .overlay(alignment: .topLeading) {
             TutorialButton(action: openTutorial)
         }
-        #if os(iOS)
         // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
         .overlay(alignment: .topTrailing) {
             if !isScreenshotDemo {
                 settingsButton
             }
         }
-        #endif
         #if os(macOS)
         .frame(minWidth: DeckLayout.minimumWindowSize.width, minHeight: DeckLayout.minimumWindowSize.height)
         #endif
@@ -187,6 +185,25 @@ struct ContentView: View {
         }
         .accessibilityLabel("Settings")
         .padding(.trailing, 4)
+    }
+    #elseif os(macOS)
+    /// 設定ウィンドウ（⌘, と同じ `Settings` シーン）を開くボタン。左上の「？」と大きさ・余白をそろえて右上に置く。
+    /// `SettingsLink` は macOS 14 からなので、macOS 13 では出さない（アプリのメニューの「設定…」（⌘,）から開く）
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14.0, *) {
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.system(size: TutorialButtonLayout.iconSize, weight: .regular))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: TutorialButtonLayout.hitSize, height: TutorialButtonLayout.hitSize)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(TutorialButtonLayout.margin)
+            .accessibilityLabel("Settings")
+            .help("Settings")
+        }
     }
     #endif
     
