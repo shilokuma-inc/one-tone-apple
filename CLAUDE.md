@@ -98,7 +98,7 @@ xcodebuild test -project OneTone.xcodeproj -scheme OneTone -destination 'platfor
 - 説明文の JSON は App Store Connect の現在値を正とする。初回や手で編集されたあとは `Metadata/App Store` を `mode: export` で実行し、
   Job Summary / artifact の JSON を `AppStore/metadata/` に取り込んでから `dry-run` で差分ゼロを確かめる。手元の検査は `python3 Tools/upload_metadata.py --check`
 - 認証は Organization secrets の App Store Connect API Key（`APPLE_API_KEY_*`）。手元に .p8 は無いので、App Store Connect の状態確認は CI の dry-run で行う
-- PR 本文のスクリーンショットは `gh pr create --attach` で添付する（assets ブランチは使わない）。本文は Markdown の表に `![Before](./before.png)` の形で書き、
+- PR 本文のスクリーンショットは `gh pr create --attach`（gh v2.99.0 以上）で添付する（assets ブランチは使わない）。本文は Markdown の表に `![Before](./before.png)` の形で書き、
   作成後に `<img width="300">` に置き換える（手順は shilokuma-inc/template-app-ios の README の「PR 本文のスクリーンショット」）
 
 ## ralph-loop による自律開発
