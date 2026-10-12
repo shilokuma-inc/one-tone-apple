@@ -59,22 +59,20 @@ enum Geometry {
     }
 }
 
-/// 塗りに使う色。既定のアイコンは白黒にシアン、代替アイコンはテーマ色を差し色にする
+/// 塗りに使う色。既定のアイコンは白い線に中央のバーだけシアン、代替アイコンは線をすべてテーマ色にする
 struct Palette {
-    /// 白（Theme.textPrimary）
-    var light: CGColor
-    /// 黒（Theme.background）
-    var dark: CGColor
-    /// 差し色（テーマ色）
+    /// 背景（Theme.background）
+    var background: CGColor
+    /// 半円と両側のバーの線。既定のアイコンは白（Theme.textPrimary）、代替アイコンはテーマ色
+    var line: CGColor
+    /// 中央のバー（テーマ色。既定のアイコンはシアン）
     var accent: CGColor
-    /// 代替アイコンの塗り方にするか
-    var isAlternate: Bool
 
+    /// theme が nil なら既定のアイコン、テーマ色を渡すとその色の代替アイコンの色
     init(theme: ThemeColor?) {
-        light = Self.cgColor(Theme.textPrimary)
-        dark = Self.cgColor(Theme.background)
+        background = Self.cgColor(Theme.background)
         accent = Self.cgColor((theme ?? .default).accent)
-        isAlternate = theme != nil
+        line = theme == nil ? Self.cgColor(Theme.textPrimary) : accent
     }
 
     static func cgColor(_ color: Color) -> CGColor {
@@ -83,18 +81,17 @@ struct Palette {
 }
 
 enum IconDrawing {
-    /// 一辺 1 の座標（y は下向き）に描く。既定のアイコンは白い線に中央のバーだけ差し色、代替アイコンは線をすべて差し色にする
+    /// 一辺 1 の座標（y は下向き）に描く
     static func draw(palette: Palette, in context: CGContext) {
-        let line = palette.isAlternate ? palette.accent : palette.light
-        context.setFillColor(palette.dark)
+        context.setFillColor(palette.background)
         context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
-        context.setStrokeColor(line)
+        context.setStrokeColor(palette.line)
         context.setLineWidth(Geometry.lineWidth)
         context.setLineCap(.round)
         context.addPath(Geometry.bowlArc)
         context.strokePath()
         for (index, rect) in Geometry.barRects.enumerated() {
-            context.setFillColor(index == 2 ? palette.accent : line)
+            context.setFillColor(index == 2 ? palette.accent : palette.line)
             context.addPath(Geometry.bar(rect))
             context.fillPath()
         }
@@ -122,11 +119,11 @@ enum IconComposerFile {
     /// レイヤー（名前と SVG）。前面から順に並べる（`icon.json` の `groups` は先頭が最前面）
     static func layers(palette: Palette) -> [(name: String, svg: String)] {
         let rects = Geometry.barRects
-        let sideBars = rects.indices.filter { $0 != 2 }.map { rect(rects[$0], color: palette.light) }
+        let sideBars = rects.indices.filter { $0 != 2 }.map { rect(rects[$0], color: palette.line) }
         return [
             ("bar-center", svg([rect(rects[2], color: palette.accent)])),
             ("bars", svg(sideBars)),
-            ("bowl", svg([bowl(color: palette.light)])),
+            ("bowl", svg([bowl(color: palette.line)])),
         ]
     }
 
@@ -141,7 +138,7 @@ enum IconComposerFile {
         let groups: [[String: Any]] = layers.map { layer in
             ["layers": [["image-name": "\(layer.name).svg", "name": layer.name]]]
         }
-        let background = ["solid": srgb(palette.dark)]
+        let background = ["solid": srgb(palette.background)]
         let json: [String: Any] = [
             // ダークでも背景はライトと同じ暗色にする（指定しないと、システムがライトより明るい灰色のグラデーションに置き換える）
             "fill-specializations": [["value": background], ["appearance": "dark", "value": background]],
