@@ -23,7 +23,7 @@ struct OneToneApp: App {
                 .environment(\.freezesAnimations, ScreenshotDemo.isEnabled)
         }
         #if os(macOS)
-        // アプリのメニューの「設定…」（⌘,）で開く設定ウィンドウ。iOS はメイン画面のボタンからシートで開く
+        // アプリのメニューの「設定…」（⌘,）と、メイン画面の右上の歯車（macOS 14 以降）で開く設定ウィンドウ。iOS は歯車からシートで開く
         Settings {
             SettingsView()
         }
