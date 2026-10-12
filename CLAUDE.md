@@ -98,7 +98,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift O
     --export-image --output-file "$TMPDIR/out.png" --platform iOS --rendition Default --width 1024 --height 1024 --scale 1
   ```
 - 組み込みの確認は、ビルド成果物の `Assets.car` を `xcrun assetutil --info` で見る（`xcrun actool` で直接コンパイルしても見られる。`LEARNINGS.md` の「アプリアイコン」）
-  - iOS（`<…>.app/Assets.car`）: `AppIcon` と、テーマ色の数だけの `AppIcon-<rawValue>` の rendition がある。`plutil -p <…>.app/Info.plist` の `CFBundleIcons` / `CFBundleAlternateIcons`（`~ipad` も）に全色の名前がある
+  - iOS（`<…>.app/Assets.car`）: `AppIcon` と、テーマ色の数だけの `AppIcon-<rawValue>` の rendition がある。`plutil -p <…>.app/Info.plist` の `CFBundleIcons` と `CFBundleIcons~ipad` の中の `CFBundleAlternateIcons` に全色の名前がある
   - macOS（`<…>.app/Contents/Resources/Assets.car`）: `AppIcon` だけで、`AppIcon-<rawValue>` は入らないのが正しい（代替アイコンの設定は `[sdk=iphone*]` だけ。macOS は代替アイコンを持てない）
 - 代替アイコンの名前（`AppIcon-<rawValue>`）と既定の `AppIcon` は変えない。ユーザーの選択が `UIApplication.alternateIconName` に名前で残っているので、変えるとアップデート後に選択が外れる
 
@@ -110,7 +110,9 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift O
 3. ビルド設定の `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=iphone*]`（Debug / Release の 2 か所）に `AppIcon-<rawValue>` を足す
 4. iOS のビルド成果物の `Info.plist` の `CFBundleAlternateIcons` に入ったこと、設定画面の APP ICON から選べることを確かめる
 
-アイコン以外にも、`ThemeColor` の色・`displayName` の訳（「多言語対応」の手順）と、`OneToneTests/ThemeColorTests.swift` の件数（`allCases.count`）・コントラストのテストを直す（テストは CI では流れない）。
+アイコン以外にも、`ThemeColor` の色・`displayName` の訳（「多言語対応」の手順）を足し、`OneToneTests/ThemeColorTests.swift` の件数（`allCases.count`）を直す。
+色はコントラストのテスト（`allCases` を固定の基準で判定する）が通るものを選ぶ（基準は緩めない。テストは CI では流れないので手元で流す）。
+テーマ色の数は Discussion #80 で 6〜8 色と決めているので、9 色目を足すなら先に仕様を決め直す。
 
 ## ブランチ運用・規約
 
