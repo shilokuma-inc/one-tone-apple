@@ -4,9 +4,9 @@
 // 代替アイコン（iOS だけ）は同じデザインの色違いで、線をすべてテーマ色にする（既定のアイコンとは塗り分けが違うので、代替の Cyan と既定は同じに見えない）。
 // 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする。iOS 26 / macOS 26 より前の OS 向けの画像は、.icon から Xcode がビルド時に書き出す）。
 // 正方形の全面を塗り、左右対称に描く。
-// 色は ThemeColor.swift / Theme.swift の値をそのまま使う（一緒にコンパイルする）。
+// 寸法と色の決め方は OneTone/AppIconDesign.swift（設定画面のアイコンのプレビューと共有する）、色は ThemeColor.swift / Theme.swift の値をそのまま使う（一緒にコンパイルする）。
 //
-//   swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
+//   swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
 //   "$TMPDIR/draw_app_icon" --all OneTone
 //   "$TMPDIR/draw_app_icon" <出力 .icon | 出力 PNG> [--theme <ThemeColor の rawValue>] [--size <px>（PNG だけ）]
 //
@@ -21,47 +21,10 @@ import ImageIO
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// アイコンの寸法。アイコンの一辺を 1 とした値で、y は上から下へ測る。半円は水平線 `horizon` を直径にして下に開く
-enum Geometry {
-    /// 半円の輪郭の半径（線の中心まで）
-    static let bowlRadius: CGFloat = 0.33
-    /// 線の太さ。バーと半円の輪郭で同じにする（線の両端は半円で丸める）
-    static let lineWidth: CGFloat = 0.06
-    /// バーどうしの間隔
-    static let barGap: CGFloat = 0.05
-    /// バーの長さ。外側・内側・中央の 3 つを書き、左右に折り返して 5 本にする（左右対称にするため）
-    static let barLengths: (outer: CGFloat, inner: CGFloat, center: CGFloat) = (outer: 0.18, inner: 0.32, center: 0.46)
-    /// 半円の直径を置く水平線の高さ。中央のバーの上端（horizon - barLengths.center / 2）から
-    /// 半円の輪郭の下端（horizon + bowlRadius + lineWidth / 2）までが、上下の中央に来るように求める
-    static let horizon: CGFloat = 0.5 - (bowlRadius + lineWidth / 2 - barLengths.center / 2) / 2
+/// 寸法は AppIconDesign.swift の `AppIconDesign.Geometry`（アプリのプレビューと共有する）
+typealias Geometry = AppIconDesign.Geometry
 
-    /// 左から順に 5 本のバーの矩形。縦は水平線を中心にする
-    static var barRects: [CGRect] {
-        let lengths = [barLengths.outer, barLengths.inner, barLengths.center, barLengths.inner, barLengths.outer]
-        return lengths.enumerated().map { index, length in
-            let centerX = 0.5 + CGFloat(index - 2) * (lineWidth + barGap)
-            return CGRect(x: centerX - lineWidth / 2, y: horizon - length / 2, width: lineWidth, height: length)
-        }
-    }
-
-    /// 水平線から下の半円の円弧。端から端へ 1 本で描くと小さく書き出したときに左右でアンチエイリアスがずれるので、
-    /// 下端から右端と左端へ 2 本に分けて描く（1 つのパスにまとめて 1 回で線を引くので、重なりは二重に塗られない）
-    static var bowlArc: CGPath {
-        let path = CGMutablePath()
-        let center = CGPoint(x: 0.5, y: horizon)
-        // y が下向きの座標なので、角度 π/2 が下端。π/2 → 0 で右端へ、π/2 → π で左端へ回る
-        path.addArc(center: center, radius: bowlRadius, startAngle: .pi / 2, endAngle: 0, clockwise: true)
-        path.move(to: CGPoint(x: 0.5, y: horizon + bowlRadius))
-        path.addArc(center: center, radius: bowlRadius, startAngle: .pi / 2, endAngle: .pi, clockwise: false)
-        return path
-    }
-
-    static func bar(_ rect: CGRect) -> CGPath {
-        CGPath(roundedRect: rect, cornerWidth: lineWidth / 2, cornerHeight: lineWidth / 2, transform: nil)
-    }
-}
-
-/// 塗りに使う色。既定のアイコンは白い線に中央のバーだけシアン、代替アイコンは線をすべてテーマ色にする
+/// 塗りに使う色を Core Graphics の色にしたもの。色の決め方は AppIconDesign.swift の `AppIconDesign.Palette`（アプリのプレビューと共有する）
 struct Palette {
     /// 背景（Theme.background）
     var background: CGColor
@@ -72,9 +35,10 @@ struct Palette {
 
     /// theme が nil なら既定のアイコン、テーマ色を渡すとその色の代替アイコンの色
     init(theme: ThemeColor?) {
-        background = Self.cgColor(Theme.background)
-        accent = Self.cgColor((theme ?? .default).accent)
-        line = theme == nil ? Self.cgColor(Theme.textPrimary) : accent
+        let design = AppIconDesign.Palette(theme: theme)
+        background = Self.cgColor(design.background)
+        line = Self.cgColor(design.line)
+        accent = Self.cgColor(design.accent)
     }
 
     static func cgColor(_ color: Color) -> CGColor {

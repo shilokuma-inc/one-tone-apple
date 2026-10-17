@@ -142,7 +142,7 @@ private struct SwatchLabel: View {
 
 #if os(iOS)
 /// アプリのアイコンの選択（iOS だけ）。既定のアイコン（暗い背景に白い線、中央のバーだけシアン）と、
-/// テーマ色ごとの代替アイコン（線をすべてテーマ色にしたもの）から選ぶ。見本の色はアイコンの線の色（既定は白）。
+/// テーマ色ごとの代替アイコン（線をすべてテーマ色にしたもの）から選ぶ。見本はアイコンの縮小表示（`AppIconPreview`）。
 /// 切り替えると OS が確認のダイアログを出す。失敗したら理由を表示する
 struct AppIconPicker: View {
     /// 今のアイコン。nil は既定のアイコン
@@ -157,9 +157,9 @@ struct AppIconPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             LazyVGrid(columns: columns, spacing: 8) {
-                option(nil, color: Theme.textPrimary, checkColor: Theme.background, name: "Default")
+                option(nil, name: "Default")
                 ForEach(ThemeColor.allCases) { theme in
-                    option(theme, color: theme.accent, checkColor: theme.onAccent, name: theme.displayName)
+                    option(theme, name: theme.displayName)
                 }
             }
             .disabled(!isSupported || isChanging)
@@ -180,12 +180,12 @@ struct AppIconPicker: View {
         }
     }
 
-    private func option(_ icon: ThemeColor?, color: Color, checkColor: Color, name: LocalizedStringResource) -> some View {
+    private func option(_ icon: ThemeColor?, name: LocalizedStringResource) -> some View {
         let isSelected = icon == current
         return Button {
             select(icon)
         } label: {
-            SwatchLabel(color: color, checkColor: checkColor, name: name, isSelected: isSelected)
+            AppIconLabel(icon: icon, name: name, isSelected: isSelected)
         }
         .buttonStyle(WaveformButtonStyle(isSelected: isSelected))
         .accessibilityLabel("App Icon: \(String(localized: name))")
@@ -205,6 +205,49 @@ struct AppIconPicker: View {
             current = ThemeColor(alternateIconName: UIApplication.shared.alternateIconName)
             isChanging = false
         }
+    }
+}
+
+/// アイコンの縮小表示と名前。選択中はアイコンの右下にチェックを載せ、名前を太字にする（色だけに頼らない）。
+/// テーマカラーの選択の `SwatchLabel` とは別にする（テーマカラーの選択の見た目を変えないため）
+private struct AppIconLabel: View {
+    /// nil は既定のアイコン
+    let icon: ThemeColor?
+    let name: LocalizedStringResource
+    let isSelected: Bool
+
+    @Environment(\.themeColor) private var themeColor
+
+    /// アイコンの一辺（pt）
+    static let iconSize: CGFloat = 44
+
+    var body: some View {
+        VStack(spacing: 6) {
+            AppIconPreview(theme: icon, size: Self.iconSize)
+                // アイコンの背景は暗く、同じく暗いボタンの面に埋もれるので、細い縁取りで輪郭を見せる
+                .overlay(
+                    RoundedRectangle(cornerRadius: Self.iconSize * AppIconPreview.cornerRadiusRatio, style: .continuous)
+                        .strokeBorder(Theme.textDisabled.opacity(0.6), lineWidth: 1)
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(themeColor.onAccent)
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(themeColor.accent))
+                            .overlay(Circle().strokeBorder(Theme.surfaceRaised, lineWidth: 2))
+                            .offset(x: 5, y: 5)
+                    }
+                }
+            Text(name)
+                .font(.system(.caption, design: .rounded).weight(isSelected ? .bold : .medium))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
     }
 }
 #endif
