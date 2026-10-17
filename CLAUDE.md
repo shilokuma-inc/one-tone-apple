@@ -76,17 +76,18 @@ xcodebuild test -project OneTone.xcodeproj -scheme OneTone -destination 'platfor
 
 | もの | 場所 |
 | --- | --- |
-| 描画スクリプト（寸法は `Geometry`、色は `Palette`。色は `Theme.swift` / `ThemeColor.swift` を一緒にコンパイルして使う） | `Tools/draw_app_icon.swift` |
+| 描画スクリプト（`AppIconDesign.swift` / `Theme.swift` / `ThemeColor.swift` を一緒にコンパイルして使う） | `Tools/draw_app_icon.swift` |
+| 図柄の寸法（`AppIconDesign.Geometry`）と色の決め方（`AppIconDesign.Palette`）。描画スクリプトと設定画面のアイコンのプレビューで共有する | `OneTone/AppIconDesign.swift` |
 | 既定のアイコン | `OneTone/AppIcon.icon`（`icon.json` と `Assets/` のレイヤーの SVG） |
 | 代替アイコン（iOS だけ） | `OneTone/AppIcon-<ThemeColor の rawValue>.icon` |
 
 ```bash
-swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
+swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swift OneTone/ThemeColor.swift OneTone/Theme.swift -o "$TMPDIR/draw_app_icon"
 "$TMPDIR/draw_app_icon" --all OneTone                                  # .icon を既定・代替とも作り直す
 "$TMPDIR/draw_app_icon" "$TMPDIR/pink.png" --theme pink --size 1024    # 見た目の確認用の PNG（コミットしない）
 ```
 
-- 見た目を変えるときはスクリプトの定数を直して `--all` を流し直す。`.icon` の `icon.json` や SVG は手で編集せず、Icon Composer で開いて保存もしない（保存すると `icon.json` が書き換わり、スクリプトの出力とずれる）
+- 見た目を変えるときは `AppIconDesign.swift`（寸法・色）かスクリプト（書き出し）の定数を直して `--all` を流し直す。`.icon` の `icon.json` や SVG は手で編集せず、Icon Composer で開いて保存もしない（保存すると `icon.json` が書き換わり、スクリプトの出力とずれる）
 - 既定のアイコンは白い線（`Theme.textPrimary`）の半円と 5 本のバーで、中央のバーだけシアン。代替アイコンは線をすべてテーマ色にする（代替の Cyan と既定が同じに見えないように）。
   背景はどちらも `Theme.background` で、ダークでも同じ（`fill-specializations`）。ティント・クリアはシステムの単色化に任せる
 - 角丸・影・余白は描かない（iOS と macOS 26 は OS がマスクする）。iOS 26 / macOS 26 より前の OS 向けの画像は、ビルド時に Xcode が `.icon` から書き出す
