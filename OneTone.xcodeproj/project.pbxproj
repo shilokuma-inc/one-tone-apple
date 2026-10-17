@@ -34,6 +34,7 @@
 		D1BD1C8BB4E363C1197FE6A7 /* SampleRingBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */; };
 		407D703CBB65FE821F124499 /* AudioOutputTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */; };
 		7E2A91C4D3B85F0A6C1E4D02 /* ThemeColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2A91C4D3B85F0A6C1E4D01 /* ThemeColor.swift */; };
+		D0A1C3E5F7092B4D6E8F1A02 /* AppIconDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A1C3E5F7092B4D6E8F1A01 /* AppIconDesign.swift */; };
 		7E2A91C4D3B85F0A6C1E4D04 /* ThemeColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2A91C4D3B85F0A6C1E4D03 /* ThemeColorTests.swift */; };
 		7E2A91C4D3B85F0A6C1E4D06 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2A91C4D3B85F0A6C1E4D05 /* SettingsView.swift */; };
 		AFE1C6798A21DAD499BD65D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD16F17D9D3AE4C740823B6 /* Theme.swift */; };
@@ -118,6 +119,7 @@
 		CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleRingBufferTests.swift; sourceTree = "<group>"; };
 		D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutputTapTests.swift; sourceTree = "<group>"; };
 		7E2A91C4D3B85F0A6C1E4D01 /* ThemeColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColor.swift; sourceTree = "<group>"; };
+		D0A1C3E5F7092B4D6E8F1A01 /* AppIconDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconDesign.swift; sourceTree = "<group>"; };
 		7E2A91C4D3B85F0A6C1E4D03 /* ThemeColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorTests.swift; sourceTree = "<group>"; };
 		7E2A91C4D3B85F0A6C1E4D05 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CCD16F17D9D3AE4C740823B6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -188,6 +190,7 @@
 				BD510FE5B23A742588DF144E /* NeonGlow.swift */,
 				CCD16F17D9D3AE4C740823B6 /* Theme.swift */,
 				7E2A91C4D3B85F0A6C1E4D01 /* ThemeColor.swift */,
+				D0A1C3E5F7092B4D6E8F1A01 /* AppIconDesign.swift */,
 				2F4CF62B2D93FFBC0B96FF58 /* SampleRingBuffer.swift */,
 				A470FA42F175C2AACE62DA15 /* WaveformPicker.swift */,
 				021BD47CEE205813A718328A /* VolumeControl.swift */,
@@ -421,6 +424,7 @@
 				AFE1C6798A21DAD499BD65D4 /* Theme.swift in Sources */,
 				7E2A91C4D3B85F0A6C1E4D06 /* SettingsView.swift in Sources */,
 				7E2A91C4D3B85F0A6C1E4D02 /* ThemeColor.swift in Sources */,
+				D0A1C3E5F7092B4D6E8F1A02 /* AppIconDesign.swift in Sources */,
 				DA5CD492011D1C2A9423EAA8 /* SampleRingBuffer.swift in Sources */,
 				481F0AD1F62F3F8054A85E76 /* WaveformPicker.swift in Sources */,
 				3CED587896C10CC48032FB58 /* VolumeControl.swift in Sources */,
