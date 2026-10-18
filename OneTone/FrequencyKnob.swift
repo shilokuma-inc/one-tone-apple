@@ -9,15 +9,16 @@ import AppKit
 #endif
 
 /// 周波数を DJ 機材のつまみのように回して変えるノブ。変更は `onChange` を通して親の 1 か所に集める。
-/// 細かい値はノブでは合わせにくいため、スライダーと数値入力も併せて残している
+/// 細かい値はノブでは合わせにくいため、スライダーと数値入力も併せて残している。
+/// 音名モードでは `scale: .semitone` にして、半音にスナップした周波数だけを渡す
 struct FrequencyKnob: View {
     let frequency: Double
+    var scale: KnobScale = .continuous
     let onChange: (Double) -> Void
     @Environment(\.themeColor) private var themeColor
 
-    /// ドラッグ中、前回の変化時点までの移動量。修飾キーを途中で押しても値が飛ばないよう、差分ずつ反映する。
-    /// `@GestureState` にしているのは、ドラッグがキャンセルされて `onEnded` が呼ばれなくても初期値に戻すため
-    @GestureState private var lastTranslation: CGSize = .zero
+    /// ドラッグ中の状態。`@GestureState` にしているのは、ドラッグがキャンセルされて `onEnded` が呼ばれなくても初期値に戻すため
+    @GestureState private var drag = KnobDragState()
 
     private let size: CGFloat = 140
 
@@ -57,31 +58,52 @@ struct FrequencyKnob: View {
         .contentShape(Circle())
         .gesture(dragGesture)
         .accessibilityElement()
-        .accessibilityLabel("Frequency")
-        .accessibilityValue("\(FrequencyInput.format(frequency)) Hz")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment:
-                onChange(KnobMapping.adjusted(frequency, by: KnobMapping.accessibilityStep))
+                onChange(scale.accessibilityAdjusted(frequency, up: true))
             case .decrement:
-                onChange(KnobMapping.adjusted(frequency, by: -KnobMapping.accessibilityStep))
+                onChange(scale.accessibilityAdjusted(frequency, up: false))
             @unknown default:
                 break
             }
         }
     }
 
+    private var accessibilityLabel: Text {
+        switch scale {
+        case .continuous: return Text("Frequency")
+        case .semitone: return Text("Note")
+        }
+    }
+
+    /// 音名は訳さない（`A4` のまま読む）
+    private var accessibilityValue: Text {
+        switch scale {
+        case .continuous: return Text("\(FrequencyInput.format(frequency)) Hz")
+        case .semitone: return Text(verbatim: NoteInput.note(for: frequency).name)
+        }
+    }
+
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
-            .updating($lastTranslation) { value, previous, _ in
+            .updating($drag) { value, state, _ in
                 let delta = KnobMapping.positionDelta(
-                    dx: value.translation.width - previous.width,
-                    dy: value.translation.height - previous.height,
+                    dx: value.translation.width - state.translation.width,
+                    dy: value.translation.height - state.translation.height,
                     isFine: Self.isFineAdjustment
                 )
-                previous = value.translation
+                state.translation = value.translation
                 guard delta != 0 else { return }
-                onChange(KnobMapping.adjusted(frequency, by: delta))
+                // 半音にスナップするときも、スナップ前の位置から動かす。スナップ後の値から動かすと、
+                // 半音（約 2pt）に満たない動きが毎回丸めで打ち消され、ゆっくり回しても動かない
+                let unsnapped = KnobMapping.adjusted(state.unsnappedFrequency ?? frequency, by: delta)
+                state.unsnappedFrequency = unsnapped
+                let snapped = scale.snapped(unsnapped)
+                guard snapped != frequency else { return }
+                onChange(snapped)
             }
     }
 
@@ -93,6 +115,40 @@ struct FrequencyKnob: View {
         false
         #endif
     }
+}
+
+/// ノブで選べる値の刻み
+enum KnobScale {
+    /// 周波数を連続的に動かす（Hz モード）
+    case continuous
+    /// 半音にスナップする（音名モード）。常にちょうどの音の周波数になる
+    case semitone
+
+    /// この刻みに合わせた周波数
+    func snapped(_ frequency: Double) -> Double {
+        switch self {
+        case .continuous: return frequency
+        case .semitone: return NoteInput.snapped(frequency)
+        }
+    }
+
+    /// VoiceOver の 1 回の調整。連続なら全域の 1/60、半音なら 1 半音動かす
+    func accessibilityAdjusted(_ frequency: Double, up: Bool) -> Double {
+        switch self {
+        case .continuous:
+            return KnobMapping.adjusted(frequency, by: up ? KnobMapping.accessibilityStep : -KnobMapping.accessibilityStep)
+        case .semitone:
+            return NoteInput.note(for: frequency).clampedTransposed(by: up ? 1 : -1).frequency
+        }
+    }
+}
+
+/// ノブのドラッグ中に覚えておくもの
+struct KnobDragState {
+    /// 前回の変化時点までの移動量。修飾キーを途中で押しても値が飛ばないよう、差分ずつ反映する
+    var translation: CGSize = .zero
+    /// スナップする前の周波数。ドラッグの始めは nil で、今の周波数から動かし始める
+    var unsnappedFrequency: Double?
 }
 
 /// ノブの位置（0...1）と周波数・角度・ドラッグ量の対応。UI から切り離してテストできるようにしている

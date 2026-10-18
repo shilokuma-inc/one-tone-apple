@@ -23,6 +23,16 @@ enum FrequencyMode: String, CaseIterable, Identifiable {
     /// 保存値が無いときのモード。既存ユーザーの見た目を変えないよう Hz にする
     static let `default`: FrequencyMode = .hertz
 
+    /// 保存されたモード。保存値が無い・読めないときは既定（Hz）。`@AppStorage` を使えない起動時の初期化で読む
+    static func stored(in defaults: UserDefaults) -> FrequencyMode {
+        defaults.string(forKey: storageKey).flatMap(FrequencyMode.init(rawValue:)) ?? .default
+    }
+
+    /// 画面に使うモード。スクリーンショットの撮影モードでは、保存値に関わらず既定（Hz）で撮る
+    static func displayed(stored: FrequencyMode, isScreenshotDemo: Bool) -> FrequencyMode {
+        isScreenshotDemo ? .default : stored
+    }
+
     /// 設定画面のボタンの名前。大文字のラベルとして全言語で英語のまま出す（`Hz` は単位、`NOTE` / `CHORD` は `PLAY` などと同じ扱い）ので `String` のままにしている
     var label: String {
         switch self {

@@ -20,6 +20,8 @@ struct ContentView: View {
     @State private var waveform: Waveform
     /// 選んだテーマ。保存値が無い・読めないときは既定のテーマ
     @AppStorage(ThemeColor.storageKey) private var storedThemeColor: ThemeColor = .default
+    /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
+    @AppStorage(FrequencyMode.storageKey) private var storedFrequencyMode: FrequencyMode = .default
     private let isScreenshotDemo: Bool
     /// 周波数・音量・波形の保存先。撮影モードでは読み書きしないので nil
     private let settingsStore: ToneSettingsStore?
@@ -41,7 +43,11 @@ struct ContentView: View {
     init(screenshotScene: ScreenshotDemo.Scene? = ScreenshotDemo.scene, defaults: UserDefaults = .standard) {
         let store = ToneSettingsStore.forLaunch(screenshotScene: screenshotScene, defaults: defaults)
         let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
-        let initial = restoration.settings
+        var initial = restoration.settings
+        // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
+        if FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), isScreenshotDemo: screenshotScene != nil) == .note {
+            initial.frequency = NoteInput.snapped(initial.frequency)
+        }
         _audioManager = StateObject(wrappedValue: AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial))
         _frequency = State(initialValue: initial.frequency)
         _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
@@ -107,6 +113,12 @@ struct ContentView: View {
         #endif
         .themedScreen()
         .environment(\.themeColor, ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo))
+        // 設定画面でモードを切り替えたら、パネルを切り替える。音名モードへは最寄りの半音にそろえる（再生は止めない）
+        .onValueChange(of: frequencyMode) { mode in
+            if mode == .note {
+                setFrequency(NoteInput.snapped(frequency))
+            }
+        }
         #if os(iOS)
         .sheet(isPresented: $isShowingSettings) {
             NavigationStack {
@@ -207,8 +219,41 @@ struct ContentView: View {
     }
     #endif
     
-    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    /// 画面に使う表示モード。撮影モードでは保存値に関わらず Hz で撮る
+    private var frequencyMode: FrequencyMode {
+        FrequencyMode.displayed(stored: storedFrequencyMode, isScreenshotDemo: isScreenshotDemo)
+    }
+
+    /// 周波数を決める部品。選んだモードの操作だけを出す（Discussion #219 Q3）
+    @ViewBuilder
     private var frequencyPanel: some View {
+        switch frequencyMode {
+        case .note:
+            notePanel
+        case .hertz, .chord:
+            // 和音モードのパネルはまだ無いので、それまでは Hz の操作を出す
+            hertzPanel
+        }
+    }
+
+    /// 音名で決める部品（半音にスナップするノブ・音名の表示・スライダー・音名の選択・プリセット）。Hz の数値入力とプリセットは出さない
+    private var notePanel: some View {
+        let note = NoteInput.note(for: frequency)
+        return DeckPanel(title: "FREQUENCY") {
+            FrequencyKnob(frequency: frequency, scale: .semitone, onChange: setFrequency)
+
+            NoteDisplay(note: note)
+
+            NoteSlider(note: note, onChange: setNote)
+
+            NotePicker(note: note, onChange: setNote)
+
+            NotePresetButtons(note: note, onSelect: setNote)
+        }
+    }
+
+    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    private var hertzPanel: some View {
         DeckPanel(title: "FREQUENCY") {
             FrequencyKnob(frequency: frequency, onChange: setFrequency)
             
@@ -250,6 +295,10 @@ struct ContentView: View {
         settingsStore?.save(frequency: newFrequency)
     }
     
+    private func setNote(_ note: MusicalNote) {
+        setFrequency(note.frequency)
+    }
+
     private func setVolume(_ newVolume: Double) {
         volume = newVolume
         audioManager.updateVolume(newVolume)
@@ -313,6 +362,18 @@ enum FrequencyInput {
             return String(localized: "\(format(frequency / 1000)) kHz")
         }
         return String(localized: "\(format(frequency)) Hz")
+    }
+}
+
+extension View {
+    /// 値が変わったときに呼ぶ。`onChange(of:)` は iOS 17 / macOS 14 で引数が変わったので、macOS 13 と両方で警告なく使えるよう分ける
+    @ViewBuilder
+    func onValueChange<Value: Equatable>(of value: Value, perform action: @escaping (Value) -> Void) -> some View {
+        if #available(iOS 17.0, macOS 14.0, *) {
+            onChange(of: value) { _, newValue in action(newValue) }
+        } else {
+            onChange(of: value, perform: action)
+        }
     }
 }
 
