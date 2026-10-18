@@ -45,7 +45,7 @@ xcodebuild test -project OneTone.xcodeproj -scheme OneTone -destination 'platfor
 
 ### 訳さない文言
 
-大文字のラベル（`PLAY` / `STOP` / `VOLUME` / `LEVEL` / `FREQUENCY` / `OUTPUT` / `FREQUENCY MODE` / 表示モードの `NOTE` / `CHORD` など）、波形名（Sine / Square / Triangle / Sawtooth）、アプリ名「One Tone」、単位記号（Hz / kHz / dB）、
+大文字のラベル（`PLAY` / `STOP` / `VOLUME` / `LEVEL` / `FREQUENCY` / `OUTPUT` / `FREQUENCY MODE` と、その選択肢の `NOTE` / `CHORD` など）、波形名（Sine / Square / Triangle / Sawtooth）、アプリ名「One Tone」、単位記号（Hz / kHz / dB）、
 音名・コード名（`C` / `C#` / `A4` / `F#5` / `Am` / `F#m` など。12 平均律のシャープ表記。Discussion #219 Q6）は全言語で英語のまま出す。
 
 - `Text(verbatim: "PLAY")` で書く（catalog に載らないので訳の欠けにならない）

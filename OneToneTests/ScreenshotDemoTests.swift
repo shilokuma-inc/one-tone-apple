@@ -112,6 +112,7 @@ final class ScreenshotDemoTests: XCTestCase {
         // チュートリアルの音名のページはちょうどのプリセットの音（A4）で、パッドが選択中に見える
         let tutorialNote = NoteInput.note(for: ScreenshotDemo.Scene.tutorialNote.frequency)
         XCTAssertEqual(tutorialNote.name, "A4")
+        XCTAssertEqual(ScreenshotDemo.Scene.tutorialNote.frequency, tutorialNote.frequency, accuracy: 1e-9)
         XCTAssertTrue(NoteInput.presets.contains(tutorialNote))
     }
 
