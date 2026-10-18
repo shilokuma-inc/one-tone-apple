@@ -53,8 +53,13 @@ struct Chord: Hashable, Identifiable {
     /// 構成音（低い順。根音は `rootOctave`）
     var notes: [MusicalNote] {
         // 根音の位置は C4〜B4、最も高い構成音でも F#5 なので扱える範囲（E0〜D#10）の外にはならない
-        guard let rootNote = MusicalNote(root, octave: Self.rootOctave) else { return [] }
-        return quality.intervals.compactMap { rootNote.transposed(by: $0) }
+        guard let rootNote = MusicalNote(root, octave: Self.rootOctave) else {
+            assertionFailure("\(name) の根音が扱える範囲の外")
+            return []
+        }
+        let notes = quality.intervals.compactMap { rootNote.transposed(by: $0) }
+        assert(notes.count == quality.intervals.count, "\(name) の構成音が扱える範囲の外")
+        return notes
     }
 
     /// 構成音の周波数（Hz。低い順）

@@ -389,7 +389,7 @@ final class OneToneTests: XCTestCase {
     /// 単音 → 和音 → 単音と切り替えても、隣り合うサンプルの差は小さいまま（ボイスの増減で段差を出さない）
     func testSwitchingBetweenSingleToneAndChordHasNoLargeJump() {
         let sampleRate = 48000.0
-        // 鳴っている最も高い音（G4）の正弦波の 1 サンプルの変化量に、レベルの補間の分の余裕を足す
+        // 鳴っている最も高い音（G4、392Hz）より高い 440Hz の正弦波の 1 サンプルの変化量に、レベルの補間の分の余裕を足す
         let maxStep = Float(2 * Double.pi * 440 / sampleRate) + 0.02
         var synthesizer = ToneSynthesizer(sampleRate: sampleRate, frequency: 261.6256, volume: 1, waveform: .sine)
         synthesizer.update(frequency: 261.6256, volume: 1, waveform: .sine, isPlaying: true)
