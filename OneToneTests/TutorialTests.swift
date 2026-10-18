@@ -25,7 +25,7 @@ final class TutorialTests: XCTestCase {
     // MARK: - ページ定義
 
     func testPagesFollowAgreedOrder() {
-        XCTAssertEqual(Tutorial.pages.map(\.id), [.welcome, .playback, .frequency, .volume, .waveform])
+        XCTAssertEqual(Tutorial.pages.map(\.id), [.welcome, .playback, .frequency, .volume, .waveform, .note, .chord])
         XCTAssertEqual(Tutorial.pages.map(\.id), TutorialPage.ID.allCases)
     }
 
@@ -52,7 +52,7 @@ final class TutorialTests: XCTestCase {
         let trials = Dictionary(uniqueKeysWithValues: Tutorial.pages.map { ($0.id, $0.trial) })
         XCTAssertEqual(trials[.frequency], .tone(frequency: 440))
         XCTAssertEqual(trials[.waveform], .waveforms(frequency: 440))
-        for id in [TutorialPage.ID.welcome, .playback, .volume] {
+        for id in [TutorialPage.ID.welcome, .playback, .volume, .note, .chord] {
             XCTAssertEqual(trials[id], .some(nil), "\(id) に試聴は無い")
         }
     }
@@ -69,6 +69,31 @@ final class TutorialTests: XCTestCase {
         for waveform in Waveform.allCases {
             XCTAssertTrue(message.contains(waveform.displayName), "波形ページに \(waveform.displayName) が無い")
         }
+    }
+
+    /// 音名・和音モードのページは、設定の FREQUENCY MODE の選び方と例の音名・コード名（訳さない）を書く
+    func testNoteAndChordPagesMentionModeAndExamples() throws {
+        let note = try XCTUnwrap(Tutorial.pages.first { $0.id == .note }).message.key
+        for word in ["FREQUENCY MODE", FrequencyMode.note.label, "A4", "C#5"] {
+            XCTAssertTrue(note.contains(word), "音名ページに \(word) が無い")
+        }
+        let chord = try XCTUnwrap(Tutorial.pages.first { $0.id == .chord }).message.key
+        for word in ["FREQUENCY MODE", FrequencyMode.chord.label, "C, G, or Am", "Major", "Minor"] {
+            XCTAssertTrue(chord.contains(word), "和音ページに \(word) が無い")
+        }
+        for name in ["C", "G", "Am"] {
+            XCTAssertTrue(ChordInput.pads.map(\.name).contains(name), "和音ページの \(name) がパッドに無い")
+        }
+    }
+
+    /// 画像を撮る前のページは記号を出す。既存のページの画像はアプリに入っている
+    func testPlaceholderSymbolsAndImages() {
+        XCTAssertEqual(Tutorial.pages.first { $0.id == .note }?.placeholderSymbol, "music.note")
+        XCTAssertEqual(Tutorial.pages.first { $0.id == .chord }?.placeholderSymbol, "pianokeys")
+        for id in [TutorialPage.ID.welcome, .playback, .frequency, .volume, .waveform] {
+            XCTAssertTrue(TutorialImage.exists(named: "Tutorial-\(id.rawValue)"), "\(id) の画像が無い")
+        }
+        XCTAssertFalse(TutorialImage.exists(named: "Tutorial-does-not-exist"))
     }
 
     // MARK: - 既読

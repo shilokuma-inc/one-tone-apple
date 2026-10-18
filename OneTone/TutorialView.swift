@@ -161,13 +161,27 @@ struct TutorialPageView: View {
     let page: TutorialPage
     let trialPlayer: TutorialTrialPlayer
 
-    var body: some View {
-        VStack(spacing: 16) {
+    /// 画面のスクリーンショット。まだ撮っていないページは、画像の代わりにページの記号を大きく出す
+    @ViewBuilder
+    private var pageImage: some View {
+        if TutorialImage.exists(named: page.imageName) {
             Image(page.imageName)
                 .resizable()
                 .scaledToFit()
                 .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius).strokeBorder(Theme.surfaceRaised, lineWidth: 1))
+        } else {
+            Image(systemName: page.placeholderSymbol)
+                .font(.system(size: 72, weight: .light))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(RoundedRectangle(cornerRadius: Theme.cornerRadius).fill(Theme.surface))
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            pageImage
                 .frame(maxHeight: .infinity)
                 // 画像は画面の見本で、内容は下の文章で説明する
                 .accessibilityHidden(true)
@@ -312,4 +326,15 @@ enum TutorialLayout {
 #Preview("Waveform page") {
     TutorialPageView(page: Tutorial.pages[4], trialPlayer: TutorialTrialPlayer(makeAudioManager: { AudioManager(startsEngine: false) }))
         .themedScreen()
+}
+
+/// チュートリアルの画像がアセットにあるか。撮り直す前の新しいページでは画像セットが無い
+enum TutorialImage {
+    static func exists(named name: String) -> Bool {
+        #if os(iOS)
+        UIImage(named: name) != nil
+        #else
+        NSImage(named: name) != nil
+        #endif
+    }
 }

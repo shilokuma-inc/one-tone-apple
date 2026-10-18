@@ -1407,6 +1407,76 @@
         }
       }
     },
+    "In Settings, set FREQUENCY MODE to NOTE to choose a note such as A4 or C#5 instead of a frequency. The knob and slider move in semitones, so you always hear the exact pitch." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定の FREQUENCY MODE を NOTE にすると、周波数の代わりに A4 や C#5 のような音名で音を選べます。ノブとスライダーは半音ずつ動くので、いつも正確な音程で鳴ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置中将 FREQUENCY MODE 设为 NOTE，即可用 A4、C#5 等音名代替频率来选择音高。旋钮和滑块按半音移动，因此总能听到准确的音高。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在設定中將 FREQUENCY MODE 設為 NOTE，即可用 A4、C#5 等音名代替頻率來選擇音高。旋鈕和滑桿以半音移動，因此總能聽到準確的音高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정에서 FREQUENCY MODE를 NOTE로 하면 주파수 대신 A4나 C#5 같은 음이름으로 음을 고를 수 있습니다. 노브와 슬라이더가 반음씩 움직이므로 언제나 정확한 음높이가 납니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En Ajustes, pon FREQUENCY MODE en NOTE para elegir una nota como A4 o C#5 en lugar de una frecuencia. La perilla y el control deslizante se mueven por semitonos, así que siempre oirás la afinación exacta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans les Réglages, choisissez NOTE pour FREQUENCY MODE afin de sélectionner une note comme A4 ou C#5 au lieu d’une fréquence. Le bouton et le curseur avancent par demi-tons : vous entendez toujours la hauteur exacte."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle in den Einstellungen FREQUENCY MODE auf NOTE, um statt einer Frequenz einen Ton wie A4 oder C#5 zu wählen. Drehregler und Schieberegler bewegen sich in Halbtönen, sodass du immer die exakte Tonhöhe hörst."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nelle Impostazioni, imposta FREQUENCY MODE su NOTE per scegliere una nota come A4 o C#5 invece di una frequenza. La manopola e il cursore si muovono a semitoni, così senti sempre l’altezza esatta."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nos Ajustes, defina FREQUENCY MODE como NOTE para escolher uma nota como A4 ou C#5 em vez de uma frequência. O botão giratório e o controle deslizante se movem em semitons, então você sempre ouve a afinação exata."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В настройках выберите для FREQUENCY MODE значение NOTE, чтобы выбирать ноту, например A4 или C#5, вместо частоты. Ручка и ползунок двигаются по полутонам, поэтому всегда звучит точная высота."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di Pengaturan, atur FREQUENCY MODE ke NOTE untuk memilih not seperti A4 atau C#5, bukan frekuensi. Kenop dan penggeser bergerak per setengah nada, sehingga nada yang terdengar selalu tepat."
+          }
+        }
+      }
+    },
     "Level" : {
       "localizations" : {
         "de" : {
@@ -2603,6 +2673,76 @@
         }
       }
     },
+    "Play a Chord" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "和音を鳴らす"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放和弦"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放和弦"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "화음 연주하기"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocar un acorde"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jouer un accord"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Akkord spielen"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suonare un accordo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocar um acorde"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Игра аккордом"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mainkan akor"
+          }
+        }
+      }
+    },
     "Play a major or minor chord such as C or Am." : {
       "localizations" : {
         "ja" : {
@@ -2739,6 +2879,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "播放與停止"
+          }
+        }
+      }
+    },
+    "Play by Note Name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音名で鳴らす"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按音名播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依音名播放"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "음이름으로 연주하기"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocar por nombre de nota"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jouer par nom de note"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Tonnamen spielen"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suonare per nome della nota"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocar pelo nome da nota"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Игра по названию ноты"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mainkan dengan nama not"
           }
         }
       }
@@ -3229,6 +3439,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Atur ulang ke default?"
+          }
+        }
+      }
+    },
+    "Set FREQUENCY MODE to CHORD to play three notes at once. Tap a pad such as C, G, or Am, or combine a root from C to B with Major or Minor." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FREQUENCY MODE を CHORD にすると、3 つの音を同時に鳴らせます。C・G・Am のようなパッドを押すか、C〜B の根音と メジャー / マイナー を組み合わせて選びます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 FREQUENCY MODE 设为 CHORD，即可同时播放三个音。点按 C、G、Am 等按键，或将 C 到 B 的根音与 大三和弦或小三和弦 组合起来选择。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將 FREQUENCY MODE 設為 CHORD，即可同時播放三個音。點按 C、G、Am 等按鍵，或將 C 到 B 的根音與 大三和弦或小三和弦 組合起來選擇。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FREQUENCY MODE를 CHORD로 하면 세 음을 동시에 낼 수 있습니다. C, G, Am 같은 패드를 누르거나, C부터 B까지의 근음과 메이저 또는 마이너를 조합해 고르세요."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pon FREQUENCY MODE en CHORD para reproducir tres notas a la vez. Pulsa un pad como C, G o Am, o combina una fundamental de C a B con Mayor o Menor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez CHORD pour FREQUENCY MODE afin de jouer trois notes à la fois. Touchez un pad comme C, G ou Am, ou combinez une fondamentale de C à B avec Majeur ou Mineur."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle FREQUENCY MODE auf CHORD, um drei Töne gleichzeitig zu spielen. Tippe auf ein Pad wie C, G oder Am oder kombiniere einen Grundton von C bis B mit Dur oder Moll."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imposta FREQUENCY MODE su CHORD per suonare tre note insieme. Tocca un pad come C, G o Am, oppure combina una fondamentale da C a B con Maggiore o Minore."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Defina FREQUENCY MODE como CHORD para tocar três notas ao mesmo tempo. Toque em um pad como C, G ou Am, ou combine uma tônica de C a B com Maior ou Menor."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите для FREQUENCY MODE значение CHORD, чтобы играть три ноты сразу. Нажмите пэд, например C, G или Am, или сочетайте основной тон от C до B с Мажор или Минор."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur FREQUENCY MODE ke CHORD untuk memainkan tiga not sekaligus. Ketuk pad seperti C, G, atau Am, atau gabungkan nada dasar dari C sampai B dengan Mayor atau Minor."
           }
         }
       }

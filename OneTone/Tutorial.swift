@@ -14,6 +14,8 @@ struct TutorialPage: Identifiable, Equatable {
         case frequency
         case volume
         case waveform
+        case note
+        case chord
     }
 
     let id: ID
@@ -26,6 +28,16 @@ struct TutorialPage: Identifiable, Equatable {
 
     /// ページの画像（実際の画面のスクリーンショット）のアセット名。macOS / iOS の出し分けは画像セットの側で行う
     var imageName: String { "Tutorial-\(id.rawValue)" }
+
+    /// 画像をまだ撮っていない（画像セットが無い）ページで、代わりに出す SF Symbols の名前。
+    /// `Tools/capture_tutorial_screenshots.sh` で撮ると画像セットができ、コードを変えずに画像へ替わる
+    var placeholderSymbol: String {
+        switch id {
+        case .note: return "music.note"
+        case .chord: return "pianokeys"
+        case .welcome, .playback, .frequency, .volume, .waveform: return "waveform"
+        }
+    }
 }
 
 /// チュートリアルの中で試せる音
@@ -77,6 +89,20 @@ enum Tutorial {
             message: "Sine is a pure, smooth tone. Square sounds hollow and buzzy, Triangle is soft and mellow, and Sawtooth is bright and sharp.",
             caution: nil,
             trial: .waveforms(frequency: 440)
+        ),
+        TutorialPage(
+            id: .note,
+            title: "Play by Note Name",
+            message: "In Settings, set FREQUENCY MODE to NOTE to choose a note such as A4 or C#5 instead of a frequency. The knob and slider move in semitones, so you always hear the exact pitch.",
+            caution: nil,
+            trial: nil
+        ),
+        TutorialPage(
+            id: .chord,
+            title: "Play a Chord",
+            message: "Set FREQUENCY MODE to CHORD to play three notes at once. Tap a pad such as C, G, or Am, or combine a root from C to B with Major or Minor.",
+            caution: nil,
+            trial: nil
         ),
     ]
 

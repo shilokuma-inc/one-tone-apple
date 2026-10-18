@@ -46,13 +46,17 @@ enum ScreenshotDemo {
         case tutorialVolume = "tutorial-volume"
         /// チュートリアルの Waveform。App Store 用の Hz モードの画面で使っていない三角波
         case tutorialWaveform = "tutorial-waveform"
+        /// チュートリアルの Note。音名モードで A4 を選んだ状態で、FREQUENCY パネルが見える位置まで送る
+        case tutorialNote = "tutorial-note"
+        /// チュートリアルの Chord。和音モードで G（App Store 用の Am と違うコード）を選んだ状態で、FREQUENCY パネルが見える位置まで送る
+        case tutorialChord = "tutorial-chord"
 
         /// App Store 用の画面（`AppStore/screenshots.json` に載せるもの）
         static let appStoreScenes: [Scene] = [.sine, .square, .sawtooth, .note, .chord]
 
         var frequency: Double {
             switch self {
-            case .sine, .chord, .tutorialWelcome, .tutorialVolume: return 440
+            case .sine, .chord, .tutorialWelcome, .tutorialVolume, .tutorialNote, .tutorialChord: return 440
             case .square, .tutorialPlayback, .tutorialFrequency: return 1000
             case .sawtooth: return 100
             case .note: return NoteInput.note(.c, octave: 5).frequency
@@ -62,7 +66,7 @@ enum ScreenshotDemo {
 
         var waveform: Waveform {
             switch self {
-            case .sine, .chord, .tutorialWelcome, .tutorialFrequency, .tutorialVolume: return .sine
+            case .sine, .chord, .tutorialWelcome, .tutorialFrequency, .tutorialVolume, .tutorialNote, .tutorialChord: return .sine
             case .square, .tutorialPlayback: return .square
             case .sawtooth: return .sawtooth
             case .note, .tutorialWaveform: return .triangle
@@ -72,8 +76,8 @@ enum ScreenshotDemo {
         /// FREQUENCY パネルの表示モード。撮影モードでは保存値ではなくこれを使う
         var frequencyMode: FrequencyMode {
             switch self {
-            case .note: return .note
-            case .chord: return .chord
+            case .note, .tutorialNote: return .note
+            case .chord, .tutorialChord: return .chord
             default: return .hertz
             }
         }
@@ -82,6 +86,7 @@ enum ScreenshotDemo {
         var chord: Chord {
             switch self {
             case .chord: return Chord(root: .a, quality: .minor)
+            case .tutorialChord: return Chord(root: .g, quality: .major)
             default: return ChordInput.defaultChord
             }
         }
@@ -104,7 +109,7 @@ enum ScreenshotDemo {
         /// 縦積みでは FREQUENCY パネルが OUTPUT パネルの下にあるので、音名・和音モードの画面はそこまで送らないとパネルが写らない
         var scrollTarget: ContentView.Section? {
             switch self {
-            case .tutorialFrequency, .note, .chord: return .frequency
+            case .tutorialFrequency, .note, .chord, .tutorialNote, .tutorialChord: return .frequency
             default: return nil
             }
         }

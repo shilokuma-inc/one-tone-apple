@@ -53,9 +53,10 @@ final class ScreenshotDemoTests: XCTestCase {
         XCTAssertEqual(Set(ScreenshotDemo.Scene.appStoreScenes.map(\.frequencyMode)), Set(FrequencyMode.allCases))
         XCTAssertEqual(ScreenshotDemo.Scene.note.frequencyMode, .note)
         XCTAssertEqual(ScreenshotDemo.Scene.chord.frequencyMode, .chord)
-        // チュートリアルの画像は Hz モードのまま撮る
+        // チュートリアルの画像は、音名・和音のページ以外は Hz モードのまま撮る
         for scene in ScreenshotDemo.Scene.allCases where !ScreenshotDemo.Scene.appStoreScenes.contains(scene) {
-            XCTAssertEqual(scene.frequencyMode, .hertz, "\(scene)")
+            let expected: FrequencyMode = scene == .tutorialNote ? .note : scene == .tutorialChord ? .chord : .hertz
+            XCTAssertEqual(scene.frequencyMode, expected, "\(scene)")
         }
     }
 
@@ -71,7 +72,9 @@ final class ScreenshotDemoTests: XCTestCase {
     func testChordSceneShowsPadChord() {
         XCTAssertEqual(ScreenshotDemo.Scene.chord.chord.name, "Am")
         XCTAssertTrue(ChordInput.pads.contains(ScreenshotDemo.Scene.chord.chord))
-        for scene in ScreenshotDemo.Scene.allCases where scene != .chord {
+        XCTAssertEqual(ScreenshotDemo.Scene.tutorialChord.chord.name, "G")
+        XCTAssertTrue(ChordInput.pads.contains(ScreenshotDemo.Scene.tutorialChord.chord))
+        for scene in ScreenshotDemo.Scene.allCases where scene != .chord && scene != .tutorialChord {
             XCTAssertEqual(scene.chord, ChordInput.defaultChord, "\(scene)")
         }
     }
@@ -87,7 +90,8 @@ final class ScreenshotDemoTests: XCTestCase {
     func testTutorialScenesCoverEveryTutorialPage() {
         // チュートリアルのアセット名（Tutorial-<ページ名>）と撮影の場面名（tutorial-<ページ名>）を対応させている
         let tutorialScenes = ScreenshotDemo.Scene.allCases.filter { !ScreenshotDemo.Scene.appStoreScenes.contains($0) }
-        XCTAssertEqual(tutorialScenes.map(\.rawValue), ["tutorial-welcome", "tutorial-playback", "tutorial-frequency", "tutorial-volume", "tutorial-waveform"])
+        XCTAssertEqual(tutorialScenes.map(\.rawValue), ["tutorial-welcome", "tutorial-playback", "tutorial-frequency", "tutorial-volume", "tutorial-waveform", "tutorial-note", "tutorial-chord"])
+        XCTAssertEqual(tutorialScenes.map(\.rawValue), TutorialPage.ID.allCases.map { "tutorial-\($0.rawValue)" })
         XCTAssertEqual(ScreenshotDemo.scene(from: ["-screenshot-scene", "tutorial-frequency"]), .tutorialFrequency)
     }
 
