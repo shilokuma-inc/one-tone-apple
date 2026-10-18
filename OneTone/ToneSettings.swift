@@ -24,8 +24,7 @@ struct ToneSettings: Equatable {
     /// 起動時の初期値。撮影モードではシーンの値を使い、保存値は読まない（撮影画像が実行環境の保存値で変わらないように）
     static func initial(screenshotScene: ScreenshotDemo.Scene?, store: ToneSettingsStore?) -> ToneSettingsRestoration {
         if let screenshotScene {
-            let settings = ToneSettings(frequency: screenshotScene.frequency, volume: screenshotScene.volume, waveform: screenshotScene.waveform)
-            return ToneSettingsRestoration(settings: settings, volumeWasCapped: false)
+            return ToneSettingsRestoration(settings: screenshotScene.settings, volumeWasCapped: false)
         }
         return store?.restore() ?? ToneSettingsRestoration(settings: .default, volumeWasCapped: false)
     }

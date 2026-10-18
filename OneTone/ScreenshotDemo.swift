@@ -32,6 +32,10 @@ enum ScreenshotDemo {
         case square
         /// 100 Hz のノコギリ波を再生中
         case sawtooth
+        /// 音名モードで C5 の三角波を再生中（C5 のプリセットが選択中に見える）
+        case note
+        /// 和音モードで Am（A4 / C5 / E5）のサイン波を再生中
+        case chord
         /// チュートリアルの Welcome。440 Hz のサイン波を再生中の画面全体
         case tutorialWelcome = "tutorial-welcome"
         /// チュートリアルの Play / Stop。1 kHz の矩形波を再生中（オシロスコープとレベルメーターが動いて見える）
@@ -44,24 +48,47 @@ enum ScreenshotDemo {
         case tutorialWaveform = "tutorial-waveform"
 
         /// App Store 用の画面（`AppStore/screenshots.json` に載せるもの）
-        static let appStoreScenes: [Scene] = [.sine, .square, .sawtooth]
+        static let appStoreScenes: [Scene] = [.sine, .square, .sawtooth, .note, .chord]
 
         var frequency: Double {
             switch self {
-            case .sine, .tutorialWelcome, .tutorialVolume: return 440
+            case .sine, .chord, .tutorialWelcome, .tutorialVolume: return 440
             case .square, .tutorialPlayback, .tutorialFrequency: return 1000
             case .sawtooth: return 100
+            case .note: return NoteInput.note(.c, octave: 5).frequency
             case .tutorialWaveform: return 220
             }
         }
 
         var waveform: Waveform {
             switch self {
-            case .sine, .tutorialWelcome, .tutorialFrequency, .tutorialVolume: return .sine
+            case .sine, .chord, .tutorialWelcome, .tutorialFrequency, .tutorialVolume: return .sine
             case .square, .tutorialPlayback: return .square
             case .sawtooth: return .sawtooth
-            case .tutorialWaveform: return .triangle
+            case .note, .tutorialWaveform: return .triangle
             }
+        }
+
+        /// FREQUENCY パネルの表示モード。撮影モードでは保存値ではなくこれを使う
+        var frequencyMode: FrequencyMode {
+            switch self {
+            case .note: return .note
+            case .chord: return .chord
+            default: return .hertz
+            }
+        }
+
+        /// 和音モードで鳴らすコード。和音モード以外のシーンでは既定（C）のまま
+        var chord: Chord {
+            switch self {
+            case .chord: return Chord(root: .a, quality: .minor)
+            default: return ChordInput.defaultChord
+            }
+        }
+
+        /// 撮る画面の音の設定
+        var settings: ToneSettings {
+            ToneSettings(frequency: frequency, volume: volume, waveform: waveform, chord: chord)
         }
 
         /// 音量。レベルメーターが上の方まで点いて見えるよう、既定の 50% より高くする。
@@ -186,7 +213,8 @@ extension AudioManager {
         guard let scene else { return AudioManager() }
         // 音を出さないので AVAudioEngine は動かさない（動いていると presentAsPlaying の波形が無音で上書きされる）
         let manager = AudioManager(startsEngine: false)
-        manager.presentAsPlaying(frequency: scene.frequency, volume: scene.volume, waveform: scene.waveform)
+        // 和音モードのシーンはコードの構成音を、それ以外は周波数の単音を鳴らしている表示にする
+        manager.presentAsPlaying(frequencies: scene.settings.frequencies(for: scene.frequencyMode), volume: scene.volume, waveform: scene.waveform)
         return manager
     }
 }

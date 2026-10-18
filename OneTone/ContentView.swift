@@ -25,6 +25,8 @@ struct ContentView: View {
     /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
     @AppStorage(FrequencyMode.storageKey) private var storedFrequencyMode: FrequencyMode = .default
     private let isScreenshotDemo: Bool
+    /// 撮影モードで撮る画面。表示モードを保存値ではなくシーンから決めるのに使う
+    private let screenshotScene: ScreenshotDemo.Scene?
     /// 周波数・音量・波形の保存先。撮影モードでは読み書きしないので nil
     private let settingsStore: ToneSettingsStore?
     #if os(iOS)
@@ -47,7 +49,7 @@ struct ContentView: View {
         let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
         // 表示モードも同じ保存先から読む（画面の `@AppStorage` と起動時の読み出しをそろえる）
         _storedFrequencyMode = AppStorage(wrappedValue: .default, FrequencyMode.storageKey, store: defaults)
-        let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), isScreenshotDemo: screenshotScene != nil)
+        let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), screenshotScene: screenshotScene)
         // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
         let initial = restoration.settings.prepared(for: launchMode)
         // `StateObject` の自動クロージャの中で作る（View の寿命で 1 回だけ作られ、init が呼び直されても余分に作らない）
@@ -67,6 +69,7 @@ struct ContentView: View {
         settingsStore = store
         _hasPendingVolumeCapNotice = State(initialValue: restoration.volumeWasCapped)
         isScreenshotDemo = screenshotScene != nil
+        self.screenshotScene = screenshotScene
         initialScrollTarget = screenshotScene?.scrollTarget
     }
     
@@ -233,9 +236,9 @@ struct ContentView: View {
     }
     #endif
     
-    /// 画面に使う表示モード。撮影モードでは保存値に関わらず Hz で撮る
+    /// 画面に使う表示モード。撮影モードでは保存値に関わらずシーンのモードで撮る
     private var frequencyMode: FrequencyMode {
-        FrequencyMode.displayed(stored: storedFrequencyMode, isScreenshotDemo: isScreenshotDemo)
+        FrequencyMode.displayed(stored: storedFrequencyMode, screenshotScene: screenshotScene)
     }
 
     /// 周波数を決める部品。選んだモードの操作だけを出す（Discussion #219 Q3）

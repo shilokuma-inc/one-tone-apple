@@ -28,9 +28,9 @@ enum FrequencyMode: String, CaseIterable, Identifiable {
         defaults.string(forKey: storageKey).flatMap(FrequencyMode.init(rawValue:)) ?? .default
     }
 
-    /// 画面に使うモード。スクリーンショットの撮影モードでは、保存値に関わらず既定（Hz）で撮る
-    static func displayed(stored: FrequencyMode, isScreenshotDemo: Bool) -> FrequencyMode {
-        isScreenshotDemo ? .default : stored
+    /// 画面に使うモード。スクリーンショットの撮影モードでは、保存値に関わらずシーンのモードで撮る
+    static func displayed(stored: FrequencyMode, screenshotScene: ScreenshotDemo.Scene?) -> FrequencyMode {
+        screenshotScene?.frequencyMode ?? stored
     }
 
     /// 設定画面のボタンの名前。大文字のラベルとして全言語で英語のまま出す（`Hz` は単位、`NOTE` / `CHORD` は `PLAY` などと同じ扱い）ので `String` のままにしている
