@@ -18,8 +18,8 @@ struct ContentView: View {
     @State private var frequencyText: String
     @State private var volume: Double
     @State private var waveform: Waveform
-    /// 和音モードで鳴らすコード。保存はまだしない（起動時は `ChordInput.defaultChord`）
-    @State private var chord = ChordInput.defaultChord
+    /// 和音モードで鳴らすコード。選ぶたびに保存し、起動時に復元する
+    @State private var chord: Chord
     /// 選んだテーマ。保存値が無い・読めないときは既定のテーマ
     @AppStorage(ThemeColor.storageKey) private var storedThemeColor: ThemeColor = .default
     /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
@@ -45,21 +45,21 @@ struct ContentView: View {
     init(screenshotScene: ScreenshotDemo.Scene? = ScreenshotDemo.scene, defaults: UserDefaults = .standard) {
         let store = ToneSettingsStore.forLaunch(screenshotScene: screenshotScene, defaults: defaults)
         let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
-        var initial = restoration.settings
+        // 表示モードも同じ保存先から読む（画面の `@AppStorage` と起動時の読み出しをそろえる）
+        _storedFrequencyMode = AppStorage(wrappedValue: .default, FrequencyMode.storageKey, store: defaults)
         let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), isScreenshotDemo: screenshotScene != nil)
         // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
-        if launchMode == .note {
-            initial.frequency = NoteInput.snapped(initial.frequency)
-        }
+        let initial = restoration.settings.prepared(for: launchMode)
         // `StateObject` の自動クロージャの中で作る（View の寿命で 1 回だけ作られ、init が呼び直されても余分に作らない）
         _audioManager = StateObject(wrappedValue: {
             let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
-            // 和音モードで起動するときは、コードの構成音を鳴らす準備をしておく
+            // 和音モードで起動するときは、復元したコードの構成音を鳴らす準備をしておく
             if launchMode == .chord {
-                manager.updateFrequencies(ChordInput.frequencies(of: ChordInput.defaultChord))
+                manager.updateFrequencies(initial.frequencies(for: launchMode))
             }
             return manager
         }())
+        _chord = State(initialValue: initial.chord)
         _frequency = State(initialValue: initial.frequency)
         _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
         _volume = State(initialValue: initial.volume)
@@ -127,14 +127,11 @@ struct ContentView: View {
         // 設定画面でモードを切り替えたら、パネルと鳴らす音を切り替える（再生は止めない）。
         // 音名モードへは最寄りの半音にそろえ、和音モードへは選んでいるコードを、和音モードから出るときは単音に戻す
         .onValueChange(of: frequencyMode) { mode in
-            switch mode {
-            case .hertz:
-                audioManager.updateFrequency(frequency)
-            case .note:
-                setFrequency(NoteInput.snapped(frequency))
-            case .chord:
-                audioManager.updateFrequencies(ChordInput.frequencies(of: chord))
+            let prepared = currentSettings.prepared(for: mode)
+            if prepared.frequency != frequency {
+                setFrequency(prepared.frequency)
             }
+            audioManager.updateFrequencies(prepared.frequencies(for: mode))
         }
         #if os(iOS)
         .sheet(isPresented: $isShowingSettings) {
@@ -332,15 +329,17 @@ struct ContentView: View {
     private func setChord(_ newChord: Chord) {
         chord = newChord
         audioManager.updateFrequencies(ChordInput.frequencies(of: newChord))
+        settingsStore?.save(chord: newChord)
+    }
+
+    /// 今の画面の設定（保存する値と同じ組み合わせ）
+    private var currentSettings: ToneSettings {
+        ToneSettings(frequency: frequency, volume: volume, waveform: waveform, chord: chord)
     }
 
     /// 和音モードではコードの構成音を、それ以外は今の周波数を鳴らす
     private func play() {
-        if frequencyMode == .chord {
-            audioManager.playTone(frequencies: ChordInput.frequencies(of: chord))
-        } else {
-            audioManager.playTone(frequency: frequency)
-        }
+        audioManager.playTone(frequencies: currentSettings.frequencies(for: frequencyMode))
     }
 
     private func setVolume(_ newVolume: Double) {
@@ -361,8 +360,8 @@ struct ContentView: View {
         frequencyText = FrequencyInput.format(settings.frequency)
         volume = settings.volume
         waveform = settings.waveform
-        // RESET ではモードが Hz に戻るので、和音モードで選んでいたコードも既定に戻す
-        chord = ChordInput.defaultChord
+        // RESET ではモードが Hz に戻るので、和音モードで選んでいたコードも既定（C）に戻る
+        chord = settings.chord
         audioManager.apply(settings)
     }
 

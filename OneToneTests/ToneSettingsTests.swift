@@ -225,6 +225,80 @@ final class ToneSettingsTests: XCTestCase {
         XCTAssertEqual(VolumeCapNotice.percent, 20)
     }
 
+    // MARK: - 和音モードのコード
+
+    func testDefaultChordIsC() {
+        XCTAssertEqual(ToneSettings.default.chord, Chord(root: .c, quality: .major))
+    }
+
+    func testSavedChordIsRestored() {
+        let store = ToneSettingsStore(defaults: defaults)
+        store.save(chord: Chord(root: .fSharp, quality: .minor))
+        XCTAssertEqual(store.load().chord.name, "F#m")
+    }
+
+    /// 保存値は変えない約束の形（根音は 0〜11 の数値、種類は文字列）
+    func testChordIsStoredAsStableRawValues() {
+        ToneSettingsStore(defaults: defaults).save(chord: Chord(root: .a, quality: .minor))
+        XCTAssertEqual(ToneSettingsStore.chordRootKey, "toneChordRoot")
+        XCTAssertEqual(ToneSettingsStore.chordQualityKey, "toneChordQuality")
+        XCTAssertEqual(defaults.integer(forKey: ToneSettingsStore.chordRootKey), 9)
+        XCTAssertEqual(defaults.string(forKey: ToneSettingsStore.chordQualityKey), "minor")
+    }
+
+    /// 根音と種類のどちらかが壊れていたら、コードは既定（C）に戻し、他の保存値は残す
+    func testBrokenChordFallsBackToDefault() {
+        let store = ToneSettingsStore(defaults: defaults)
+        store.save(frequency: 1234)
+        let broken: [(Any?, Any?)] = [
+            (12, "major"),
+            (-1, "minor"),
+            (2.5, "major"),
+            ("2", "major"),
+            (true, "major"),
+            (2, "sus4"),
+            (2, 1),
+            (nil, "major"),
+            (2, nil),
+        ]
+        for (root, quality) in broken {
+            defaults.set(root, forKey: ToneSettingsStore.chordRootKey)
+            defaults.set(quality, forKey: ToneSettingsStore.chordQualityKey)
+            let loaded = store.load()
+            XCTAssertEqual(loaded.chord, ToneSettings.default.chord, "\(String(describing: root)) / \(String(describing: quality))")
+            XCTAssertEqual(loaded.frequency, 1234)
+        }
+    }
+
+    /// 和音のコードを足す前に保存された値（周波数・音量・波形だけ）もそのまま読める
+    func testValuesSavedBeforeChordStillLoad() {
+        let store = ToneSettingsStore(defaults: defaults)
+        store.save(frequency: 880)
+        store.save(volume: 0.1)
+        store.save(waveform: .triangle)
+        XCTAssertEqual(store.load(), ToneSettings(frequency: 880, volume: 0.1, waveform: .triangle, chord: ChordInput.defaultChord))
+    }
+
+    // MARK: - 表示モードに合わせた音
+
+    func testPreparedSnapsFrequencyOnlyInNoteMode() {
+        let settings = ToneSettings(frequency: 445, volume: 0.5, waveform: .sine, chord: Chord(root: .a, quality: .minor))
+        XCTAssertEqual(settings.prepared(for: .note).frequency, 440, accuracy: 1e-9)
+        XCTAssertEqual(settings.prepared(for: .hertz).frequency, 445)
+        XCTAssertEqual(settings.prepared(for: .chord).frequency, 445)
+        XCTAssertEqual(settings.prepared(for: .note).chord, settings.chord)
+    }
+
+    func testFrequenciesForEachMode() {
+        let aMinor = Chord(root: .a, quality: .minor)
+        let settings = ToneSettings(frequency: 1000, volume: 0.5, waveform: .sine, chord: aMinor)
+        XCTAssertEqual(settings.frequencies(for: .hertz), ToneFrequencies(1000))
+        XCTAssertEqual(settings.frequencies(for: .note), ToneFrequencies(1000))
+        XCTAssertEqual(settings.frequencies(for: .chord), ChordInput.frequencies(of: aMinor))
+        // 音名モードで起動したときは、半音にそろえた周波数の単音を鳴らす
+        XCTAssertEqual(settings.prepared(for: .note).frequencies(for: .note).all, [MusicalNote(.b, octave: 5)!.frequency])
+    }
+
     // MARK: - 既定値に戻す
 
     func testResetRemovesSavedValues() {
@@ -233,7 +307,10 @@ final class ToneSettingsTests: XCTestCase {
         store.save(volume: 0.9)
         store.save(waveform: .sawtooth)
         defaults.set(FrequencyMode.chord.rawValue, forKey: FrequencyMode.storageKey)
+        store.save(chord: Chord(root: .b, quality: .minor))
         store.reset()
+        XCTAssertNil(defaults.object(forKey: ToneSettingsStore.chordRootKey))
+        XCTAssertNil(defaults.object(forKey: ToneSettingsStore.chordQualityKey))
         XCTAssertNil(defaults.object(forKey: FrequencyMode.storageKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.frequencyKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.volumeKey))
