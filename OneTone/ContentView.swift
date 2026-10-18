@@ -254,12 +254,14 @@ struct ContentView: View {
         }
     }
 
-    /// 和音で決める部品（コード名と構成音の表示・よく使うコードのパッド）。単一の周波数のノブ・スライダー・Hz の操作は出さない
+    /// 和音で決める部品（コード名と構成音の表示・よく使うコードのパッド・根音と種類の組み合わせ）。単一の周波数のノブ・スライダー・Hz の操作は出さない
     private var chordPanel: some View {
         DeckPanel(title: "FREQUENCY") {
             ChordDisplay(chord: chord)
 
             ChordPadButtons(chord: chord, onSelect: setChord)
+
+            ChordBuilder(chord: chord, onSelect: setChord)
         }
     }
 
