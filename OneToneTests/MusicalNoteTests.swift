@@ -113,7 +113,7 @@ final class MusicalNoteTests: XCTestCase {
         XCTAssertEqual(MusicalNote(nearestTo: midpoint * 1.0001)?.name, "A#4")
     }
 
-    /// 範囲の端の周波数（20Hz / 20kHz）は、四捨五入すると範囲外の音（D#0 / E10）になるので、端の音にする
+    /// 範囲の端の周波数のうち 20Hz は、四捨五入すると範囲外の D#0 になるので端の音（E0）にする。20kHz は D#10 で範囲内
     func testFrequencyRangeEdgesClampToRangeEdges() {
         XCTAssertEqual(MusicalNote(nearestTo: FrequencyInput.range.lowerBound), MusicalNote.lowest)
         XCTAssertEqual(MusicalNote(nearestTo: FrequencyInput.range.upperBound), MusicalNote.highest)

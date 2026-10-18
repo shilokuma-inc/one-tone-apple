@@ -2732,7 +2732,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Игра аккордом"
+            "value" : "Сыграйте аккорд"
           }
         },
         "id" : {
@@ -2942,7 +2942,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Игра по названию ноты"
+            "value" : "Выберите ноту по названию"
           }
         },
         "id" : {
@@ -3448,19 +3448,19 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FREQUENCY MODE を CHORD にすると、3 つの音を同時に鳴らせます。C・G・Am のようなパッドを押すか、C〜B の根音と メジャー / マイナー を組み合わせて選びます。"
+            "value" : "FREQUENCY MODE を CHORD にすると、3 つの音を同時に鳴らせます。C・G・Am のようなパッドを押すか、C〜B の根音とメジャー／マイナーを組み合わせて選びます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将 FREQUENCY MODE 设为 CHORD，即可同时播放三个音。点按 C、G、Am 等按键，或将 C 到 B 的根音与 大三和弦或小三和弦 组合起来选择。"
+            "value" : "将 FREQUENCY MODE 设为 CHORD，即可同时播放三个音。点按 C、G、Am 等按键，或将 C 到 B 的根音与“大三和弦”或“小三和弦”组合起来选择。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "將 FREQUENCY MODE 設為 CHORD，即可同時播放三個音。點按 C、G、Am 等按鍵，或將 C 到 B 的根音與 大三和弦或小三和弦 組合起來選擇。"
+            "value" : "將 FREQUENCY MODE 設為 CHORD，即可同時播放三個音。點按 C、G、Am 等按鍵，或將 C 到 B 的根音與「大三和弦」或「小三和弦」組合起來選擇。"
           }
         },
         "ko" : {
@@ -3502,7 +3502,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Выберите для FREQUENCY MODE значение CHORD, чтобы играть три ноты сразу. Нажмите пэд, например C, G или Am, или сочетайте основной тон от C до B с Мажор или Минор."
+            "value" : "Выберите для FREQUENCY MODE значение CHORD, чтобы играть три ноты сразу. Нажмите пэд, например C, G или Am, или сочетайте основной тон от C до B с вариантом «Мажор» или «Минор»."
           }
         },
         "id" : {

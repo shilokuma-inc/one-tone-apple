@@ -107,6 +107,13 @@ final class ScreenshotDemoTests: XCTestCase {
         // 音名・和音モードの画面は、縦積み（iPhone）で FREQUENCY パネルが写る位置まで送る
         XCTAssertEqual(ScreenshotDemo.Scene.note.scrollTarget, .frequency)
         XCTAssertEqual(ScreenshotDemo.Scene.chord.scrollTarget, .frequency)
+        XCTAssertEqual(ScreenshotDemo.Scene.tutorialNote.scrollTarget, .frequency)
+        XCTAssertEqual(ScreenshotDemo.Scene.tutorialChord.scrollTarget, .frequency)
+        // チュートリアルの音名のページはちょうどのプリセットの音（A4）で、パッドが選択中に見える
+        let tutorialNote = NoteInput.note(for: ScreenshotDemo.Scene.tutorialNote.frequency)
+        XCTAssertEqual(tutorialNote.name, "A4")
+        XCTAssertEqual(ScreenshotDemo.Scene.tutorialNote.frequency, tutorialNote.frequency, accuracy: 1e-9)
+        XCTAssertTrue(NoteInput.presets.contains(tutorialNote))
     }
 
     func testPresentAsPlayingFillsOutputHistoryWithoutAudioEngine() {
