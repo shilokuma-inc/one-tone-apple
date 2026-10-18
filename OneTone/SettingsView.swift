@@ -9,10 +9,14 @@ import SwiftUI
 /// 選んだ値はその場で `@AppStorage` に保存され、メイン画面にもすぐ反映される
 struct SettingsView: View {
     @AppStorage(ThemeColor.storageKey) private var themeColor: ThemeColor = .default
+    @AppStorage(FrequencyMode.storageKey) private var frequencyMode: FrequencyMode = .default
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                DeckPanel(title: "FREQUENCY MODE") {
+                    FrequencyModePicker(selection: $frequencyMode)
+                }
                 DeckPanel(title: "THEME COLOR") {
                     ThemeColorPicker(selection: $themeColor)
                 }
@@ -31,7 +35,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity)
         }
         #if os(macOS)
-        .frame(width: 420, height: 440)
+        .frame(width: 420, height: 580)
         #endif
         .themedScreen()
         // 設定画面自体も選んだテーマの差し色で表示する
@@ -39,7 +43,42 @@ struct SettingsView: View {
     }
 }
 
-/// 周波数・音量・波形を既定値（440Hz / 50% / Sine）に戻すボタン。取り消せないので確認してから戻す。
+/// FREQUENCY パネルの表示モード（Hz / NOTE / CHORD）の選択。名前は英語のまま並べ、選んだモードの説明を下に出す。
+/// 選択中は差し色の枠と太字で示す（色だけに頼らない）。切り替えても再生は止めない
+struct FrequencyModePicker: View {
+    @Binding var selection: FrequencyMode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                ForEach(FrequencyMode.allCases) { mode in
+                    let isSelected = mode == selection
+                    Button {
+                        selection = mode
+                    } label: {
+                        Text(verbatim: mode.label)
+                            .font(.system(.callout, design: .rounded).weight(isSelected ? .bold : .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WaveformButtonStyle(isSelected: isSelected))
+                    .accessibilityLabel(Text(verbatim: mode.label))
+                    .accessibilityHint(Text(mode.summary))
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            Text(selection.summary)
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(4)
+    }
+}
+
+/// 周波数・音量・波形と表示モードを既定値（440Hz / 50% / Sine / Hz）に戻すボタン。取り消せないので確認してから戻す。
 /// 開いているメイン画面へは `ToneSettingsStore.didResetNotification` で伝える（設定画面からはメイン画面の状態に直接届かないため）。
 /// 他の設定と区別するため、テーマ色を使わずグレーで表示する（押せるまま。無効化ではない）
 struct ToneSettingsResetButton: View {

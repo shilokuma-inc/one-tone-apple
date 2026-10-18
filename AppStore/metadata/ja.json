@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "好きな音階の音を鳴らして作業に集中しよう！\n20hzから20,000hzの音を鳴らすことができます。",
+  "description": "好きな音階の音を鳴らして作業に集中しよう！\n20hzから20,000hzの音を鳴らすことができます。\nNOTE モードでは、A4 や C#5 のような音名で音を選べます。ノブとスライダーは半音ずつ動き、いつもちょうどの音が鳴ります。\nCHORD モードでは、C・G・Am のようなメジャー・マイナーの和音をタップで鳴らせます。",
   "keywords": [
     "onetone",
     "sound",

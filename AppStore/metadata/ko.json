@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "원하는 음높이의 소리를 울리며 작업에 집중하세요!\n20Hz부터 20,000Hz까지의 소리를 낼 수 있습니다.",
+  "description": "원하는 음높이의 소리를 울리며 작업에 집중하세요!\n20Hz부터 20,000Hz까지의 소리를 낼 수 있습니다.\nNOTE 모드에서는 A4나 C#5 같은 음이름으로 음을 고를 수 있습니다. 노브와 슬라이더가 반음씩 움직여 언제나 정확한 음이 납니다.\nCHORD 모드에서는 C, G, Am 같은 메이저·마이너 화음을 탭 한 번으로 연주할 수 있습니다.",
   "keywords": [
     "onetone",
     "사운드",

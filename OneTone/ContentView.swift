@@ -18,9 +18,15 @@ struct ContentView: View {
     @State private var frequencyText: String
     @State private var volume: Double
     @State private var waveform: Waveform
+    /// 和音モードで鳴らすコード。選ぶたびに保存し、起動時に復元する
+    @State private var chord: Chord
     /// 選んだテーマ。保存値が無い・読めないときは既定のテーマ
     @AppStorage(ThemeColor.storageKey) private var storedThemeColor: ThemeColor = .default
+    /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
+    @AppStorage(FrequencyMode.storageKey) private var storedFrequencyMode: FrequencyMode = .default
     private let isScreenshotDemo: Bool
+    /// 撮影モードで撮る画面。表示モードを保存値ではなくシーンから決めるのに使う
+    private let screenshotScene: ScreenshotDemo.Scene?
     /// 周波数・音量・波形の保存先。撮影モードでは読み書きしないので nil
     private let settingsStore: ToneSettingsStore?
     #if os(iOS)
@@ -41,8 +47,21 @@ struct ContentView: View {
     init(screenshotScene: ScreenshotDemo.Scene? = ScreenshotDemo.scene, defaults: UserDefaults = .standard) {
         let store = ToneSettingsStore.forLaunch(screenshotScene: screenshotScene, defaults: defaults)
         let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
-        let initial = restoration.settings
-        _audioManager = StateObject(wrappedValue: AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial))
+        // 表示モードも同じ保存先から読む（画面の `@AppStorage` と起動時の読み出しをそろえる）
+        _storedFrequencyMode = AppStorage(wrappedValue: .default, FrequencyMode.storageKey, store: defaults)
+        let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), screenshotScene: screenshotScene)
+        // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
+        let initial = restoration.settings.prepared(for: launchMode)
+        // `StateObject` の自動クロージャの中で作る（View の寿命で 1 回だけ作られ、init が呼び直されても余分に作らない）
+        _audioManager = StateObject(wrappedValue: {
+            let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
+            // 和音モードで起動するときは、復元したコードの構成音を鳴らす準備をしておく
+            if launchMode == .chord {
+                manager.updateFrequencies(initial.frequencies(for: launchMode))
+            }
+            return manager
+        }())
+        _chord = State(initialValue: initial.chord)
         _frequency = State(initialValue: initial.frequency)
         _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
         _volume = State(initialValue: initial.volume)
@@ -50,6 +69,7 @@ struct ContentView: View {
         settingsStore = store
         _hasPendingVolumeCapNotice = State(initialValue: restoration.volumeWasCapped)
         isScreenshotDemo = screenshotScene != nil
+        self.screenshotScene = screenshotScene
         initialScrollTarget = screenshotScene?.scrollTarget
     }
     
@@ -86,7 +106,7 @@ struct ContentView: View {
                 .scrollDismissesKeyboard(.interactively)
                 #endif
                 .onAppear {
-                    // チュートリアル用の撮影で、画面の下の方にある部品を写す
+                    // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
                     if let initialScrollTarget {
                         scrollProxy.scrollTo(initialScrollTarget, anchor: .top)
                     }
@@ -107,6 +127,15 @@ struct ContentView: View {
         #endif
         .themedScreen()
         .environment(\.themeColor, ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo))
+        // 設定画面でモードを切り替えたら、パネルと鳴らす音を切り替える（再生は止めない）。
+        // 音名モードへは最寄りの半音にそろえ、和音モードへは選んでいるコードを、和音モードから出るときは単音に戻す
+        .onValueChange(of: frequencyMode) { mode in
+            let prepared = currentSettings.prepared(for: mode)
+            if prepared.frequency != frequency {
+                setFrequency(prepared.frequency)
+            }
+            audioManager.updateFrequencies(prepared.frequencies(for: mode))
+        }
         #if os(iOS)
         .sheet(isPresented: $isShowingSettings) {
             NavigationStack {
@@ -207,8 +236,53 @@ struct ContentView: View {
     }
     #endif
     
-    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    /// 画面に使う表示モード。撮影モードでは保存値に関わらずシーンのモードで撮る
+    private var frequencyMode: FrequencyMode {
+        FrequencyMode.displayed(stored: storedFrequencyMode, screenshotScene: screenshotScene)
+    }
+
+    /// 周波数を決める部品。選んだモードの操作だけを出す（Discussion #219 Q3）
+    @ViewBuilder
     private var frequencyPanel: some View {
+        switch frequencyMode {
+        case .hertz:
+            hertzPanel
+        case .note:
+            notePanel
+        case .chord:
+            chordPanel
+        }
+    }
+
+    /// 和音で決める部品（コード名と構成音の表示・よく使うコードのパッド・根音と種類の組み合わせ）。単一の周波数のノブ・スライダー・Hz の操作は出さない
+    private var chordPanel: some View {
+        DeckPanel(title: "FREQUENCY") {
+            ChordDisplay(chord: chord)
+
+            ChordPadButtons(chord: chord, onSelect: setChord)
+
+            ChordBuilder(chord: chord, onSelect: setChord)
+        }
+    }
+
+    /// 音名で決める部品（半音にスナップするノブ・音名の表示・スライダー・音名の選択・プリセット）。Hz の数値入力とプリセットは出さない
+    private var notePanel: some View {
+        let note = NoteInput.note(for: frequency)
+        return DeckPanel(title: "FREQUENCY") {
+            FrequencyKnob(frequency: frequency, scale: .semitone, onChange: setFrequency)
+
+            NoteDisplay(note: note)
+
+            NoteSlider(note: note, onChange: setNote)
+
+            NotePicker(note: note, onChange: setNote)
+
+            NotePresetButtons(note: note, onSelect: setNote)
+        }
+    }
+
+    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    private var hertzPanel: some View {
         DeckPanel(title: "FREQUENCY") {
             FrequencyKnob(frequency: frequency, onChange: setFrequency)
             
@@ -228,7 +302,7 @@ struct ContentView: View {
             HStack(alignment: .center, spacing: 8) {
                 PlaybackControls(
                     isPlaying: audioManager.isPlaying,
-                    onPlay: { audioManager.playTone(frequency: frequency) },
+                    onPlay: play,
                     onStop: { audioManager.stopTone() }
                 )
                 .frame(maxWidth: .infinity)
@@ -250,6 +324,27 @@ struct ContentView: View {
         settingsStore?.save(frequency: newFrequency)
     }
     
+    private func setNote(_ note: MusicalNote) {
+        setFrequency(note.frequency)
+    }
+
+    /// 再生中なら構成音へ滑らかに移る
+    private func setChord(_ newChord: Chord) {
+        chord = newChord
+        audioManager.updateFrequencies(ChordInput.frequencies(of: newChord))
+        settingsStore?.save(chord: newChord)
+    }
+
+    /// 今の画面の設定（保存する値と同じ組み合わせ）
+    private var currentSettings: ToneSettings {
+        ToneSettings(frequency: frequency, volume: volume, waveform: waveform, chord: chord)
+    }
+
+    /// 和音モードではコードの構成音を、それ以外は今の周波数を鳴らす
+    private func play() {
+        audioManager.playTone(frequencies: currentSettings.frequencies(for: frequencyMode))
+    }
+
     private func setVolume(_ newVolume: Double) {
         volume = newVolume
         audioManager.updateVolume(newVolume)
@@ -268,6 +363,8 @@ struct ContentView: View {
         frequencyText = FrequencyInput.format(settings.frequency)
         volume = settings.volume
         waveform = settings.waveform
+        // RESET ではモードが Hz に戻るので、和音モードで選んでいたコードも既定（C）に戻る
+        chord = settings.chord
         audioManager.apply(settings)
     }
 
@@ -313,6 +410,18 @@ enum FrequencyInput {
             return String(localized: "\(format(frequency / 1000)) kHz")
         }
         return String(localized: "\(format(frequency)) Hz")
+    }
+}
+
+extension View {
+    /// 値が変わったときに呼ぶ。`onChange(of:)` は iOS 17 / macOS 14 で引数が変わったので、macOS 13 と両方で警告なく使えるよう分ける
+    @ViewBuilder
+    func onValueChange<Value: Equatable>(of value: Value, perform action: @escaping (Value) -> Void) -> some View {
+        if #available(iOS 17.0, macOS 14.0, *) {
+            onChange(of: value) { _, newValue in action(newValue) }
+        } else {
+            onChange(of: value, perform: action)
+        }
     }
 }
 

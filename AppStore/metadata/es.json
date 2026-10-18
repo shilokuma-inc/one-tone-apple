@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "¡Reproduce un tono en el tono que quieras y concéntrate en tu trabajo!\nPuedes reproducir sonidos de 20 Hz a 20.000 Hz.",
+  "description": "¡Reproduce un tono en el tono que quieras y concéntrate en tu trabajo!\nPuedes reproducir sonidos de 20 Hz a 20.000 Hz.\nEn el modo NOTE, elige una nota como A4 o C#5. La perilla y el control deslizante se mueven por semitonos, así que siempre oirás la afinación exacta.\nEn el modo CHORD, toca acordes mayores y menores como C, G y Am con un toque.",
   "keywords": [
     "onetone",
     "sonido",

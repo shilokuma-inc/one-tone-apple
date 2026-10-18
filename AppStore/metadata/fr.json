@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "Jouez un son à la hauteur de votre choix et concentrez-vous sur votre travail !\nVous pouvez jouer des sons de 20 Hz à 20 000 Hz.",
+  "description": "Jouez un son à la hauteur de votre choix et concentrez-vous sur votre travail !\nVous pouvez jouer des sons de 20 Hz à 20 000 Hz.\nEn mode NOTE, choisissez une note comme A4 ou C#5. Le bouton et le curseur avancent par demi-tons : vous entendez toujours la hauteur exacte.\nEn mode CHORD, jouez d’un toucher des accords majeurs et mineurs comme C, G et Am.",
   "keywords": [
     "onetone",
     "son",
