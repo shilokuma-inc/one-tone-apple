@@ -187,7 +187,8 @@ class AudioManager: ObservableObject {
     func updateFrequencies(_ frequencies: ToneFrequencies) {
         currentFrequencies = frequencies
         // レンダーブロックとは排他しない（今の 1 つの周波数と同じ扱い）。書き込みの途中を読まれても、
-        // 次のコールバックで正しい値に揃い、ボイスの周波数・レベルの補間で段差にはならない
+        // 次のコールバックで正しい値に揃い、ボイスの周波数・レベルの補間で段差にはならない。
+        // ただし単音 → 和音の途中（数が新しく周波数が古い）を読むと、増えたボイスが根音から数 ms 滑って入ることがある
         targetFrequencies.pointee = frequencies
     }
 
@@ -391,7 +392,8 @@ struct ToneVoice {
     }
 
     /// 再生中の変更。鳴らすボイスは今の周波数から滑らせ、新しく鳴らし始めるボイス（レベルが 0 のもの）は目標の周波数から始める。
-    /// 鳴らさなくなったボイスは周波数を変えずにフェードアウトする
+    /// 鳴らさなくなったボイスは周波数を変えずにフェードアウトする。フェードアウトし切る前（約 46ms）に鳴らし直したボイスは、
+    /// レベルが残っているので前の周波数から滑る（段差は出ない）
     mutating func glide(to newFrequency: Double, isActive: Bool) {
         if isActive {
             if level.current < ToneSynthesizer.silenceThreshold {

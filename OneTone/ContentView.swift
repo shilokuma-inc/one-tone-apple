@@ -18,6 +18,8 @@ struct ContentView: View {
     @State private var frequencyText: String
     @State private var volume: Double
     @State private var waveform: Waveform
+    /// 和音モードで鳴らすコード。保存はまだしない（起動時は `ChordInput.defaultChord`）
+    @State private var chord = ChordInput.defaultChord
     /// 選んだテーマ。保存値が無い・読めないときは既定のテーマ
     @AppStorage(ThemeColor.storageKey) private var storedThemeColor: ThemeColor = .default
     /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
@@ -44,11 +46,17 @@ struct ContentView: View {
         let store = ToneSettingsStore.forLaunch(screenshotScene: screenshotScene, defaults: defaults)
         let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
         var initial = restoration.settings
+        let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), isScreenshotDemo: screenshotScene != nil)
         // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
-        if FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), isScreenshotDemo: screenshotScene != nil) == .note {
+        if launchMode == .note {
             initial.frequency = NoteInput.snapped(initial.frequency)
         }
-        _audioManager = StateObject(wrappedValue: AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial))
+        let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
+        // 和音モードで起動するときは、コードの構成音を鳴らす準備をしておく
+        if launchMode == .chord {
+            manager.updateFrequencies(ChordInput.frequencies(of: ChordInput.defaultChord))
+        }
+        _audioManager = StateObject(wrappedValue: manager)
         _frequency = State(initialValue: initial.frequency)
         _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
         _volume = State(initialValue: initial.volume)
@@ -113,10 +121,16 @@ struct ContentView: View {
         #endif
         .themedScreen()
         .environment(\.themeColor, ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo))
-        // 設定画面でモードを切り替えたら、パネルを切り替える。音名モードへは最寄りの半音にそろえる（再生は止めない）
+        // 設定画面でモードを切り替えたら、パネルと鳴らす音を切り替える（再生は止めない）。
+        // 音名モードへは最寄りの半音にそろえ、和音モードへは選んでいるコードを、和音モードから出るときは単音に戻す
         .onValueChange(of: frequencyMode) { mode in
-            if mode == .note {
+            switch mode {
+            case .hertz:
+                audioManager.updateFrequency(frequency)
+            case .note:
                 setFrequency(NoteInput.snapped(frequency))
+            case .chord:
+                audioManager.updateFrequencies(ChordInput.frequencies(of: chord))
             }
         }
         #if os(iOS)
@@ -228,11 +242,21 @@ struct ContentView: View {
     @ViewBuilder
     private var frequencyPanel: some View {
         switch frequencyMode {
+        case .hertz:
+            hertzPanel
         case .note:
             notePanel
-        case .hertz, .chord:
-            // 和音モードのパネルはまだ無いので、それまでは Hz の操作を出す
-            hertzPanel
+        case .chord:
+            chordPanel
+        }
+    }
+
+    /// 和音で決める部品（コード名と構成音の表示・よく使うコードのパッド）。単一の周波数のノブ・スライダー・Hz の操作は出さない
+    private var chordPanel: some View {
+        DeckPanel(title: "FREQUENCY") {
+            ChordDisplay(chord: chord)
+
+            ChordPadButtons(chord: chord, onSelect: setChord)
         }
     }
 
@@ -273,7 +297,7 @@ struct ContentView: View {
             HStack(alignment: .center, spacing: 8) {
                 PlaybackControls(
                     isPlaying: audioManager.isPlaying,
-                    onPlay: { audioManager.playTone(frequency: frequency) },
+                    onPlay: play,
                     onStop: { audioManager.stopTone() }
                 )
                 .frame(maxWidth: .infinity)
@@ -297,6 +321,21 @@ struct ContentView: View {
     
     private func setNote(_ note: MusicalNote) {
         setFrequency(note.frequency)
+    }
+
+    /// 再生中なら構成音へ滑らかに移る
+    private func setChord(_ newChord: Chord) {
+        chord = newChord
+        audioManager.updateFrequencies(ChordInput.frequencies(of: newChord))
+    }
+
+    /// 和音モードではコードの構成音を、それ以外は今の周波数を鳴らす
+    private func play() {
+        if frequencyMode == .chord {
+            audioManager.playTone(frequencies: ChordInput.frequencies(of: chord))
+        } else {
+            audioManager.playTone(frequency: frequency)
+        }
     }
 
     private func setVolume(_ newVolume: Double) {
