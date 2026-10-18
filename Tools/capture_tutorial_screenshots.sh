@@ -25,7 +25,7 @@ LANGUAGES="${2:-}"
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PAGES="welcome playback frequency volume waveform"
+PAGES="welcome playback frequency volume waveform note chord"
 ASSETS_DIR="OneTone/Assets.xcassets/Tutorial"
 # 撮った画面を一時的に置く場所（リポジトリの外）
 WORK_DIR="${WORK_DIR:-${TMPDIR:-/tmp}/OneToneTutorialScreenshots}"

@@ -106,7 +106,7 @@ struct ContentView: View {
                 .scrollDismissesKeyboard(.interactively)
                 #endif
                 .onAppear {
-                    // チュートリアル用の撮影で、画面の下の方にある部品を写す
+                    // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
                     if let initialScrollTarget {
                         scrollProxy.scrollTo(initialScrollTarget, anchor: .top)
                     }
