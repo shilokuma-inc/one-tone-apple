@@ -96,9 +96,13 @@ final class ScreenshotDemoTests: XCTestCase {
         XCTAssertTrue(FrequencyInput.presets.contains(ScreenshotDemo.Scene.tutorialFrequency.frequency), "プリセットが選択中に見えない")
         XCTAssertLessThan(ScreenshotDemo.Scene.tutorialVolume.volume, 0.5)
         XCTAssertEqual(ScreenshotDemo.Scene.tutorialWaveform.waveform, .triangle)
-        for scene in ScreenshotDemo.Scene.appStoreScenes {
+        // Hz モードの 3 枚は先頭のまま（既存の画像の見た目を変えない）
+        for scene in ScreenshotDemo.Scene.appStoreScenes where scene.frequencyMode == .hertz {
             XCTAssertNil(scene.scrollTarget, "App Store 用の \(scene) の見た目が変わる")
         }
+        // 音名・和音モードの画面は、縦積み（iPhone）で FREQUENCY パネルが写る位置まで送る
+        XCTAssertEqual(ScreenshotDemo.Scene.note.scrollTarget, .frequency)
+        XCTAssertEqual(ScreenshotDemo.Scene.chord.scrollTarget, .frequency)
     }
 
     func testPresentAsPlayingFillsOutputHistoryWithoutAudioEngine() {

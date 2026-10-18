@@ -44,7 +44,7 @@ enum ScreenshotDemo {
         case tutorialFrequency = "tutorial-frequency"
         /// チュートリアルの Volume。音量を下げた状態
         case tutorialVolume = "tutorial-volume"
-        /// チュートリアルの Waveform。App Store 用で使っていない三角波
+        /// チュートリアルの Waveform。App Store 用の Hz モードの画面で使っていない三角波
         case tutorialWaveform = "tutorial-waveform"
 
         /// App Store 用の画面（`AppStore/screenshots.json` に載せるもの）
@@ -100,10 +100,11 @@ enum ScreenshotDemo {
             }
         }
 
-        /// 縦積みの画面（iPhone）で、開いた直後に見える位置まで送る部品。nil なら先頭のまま
+        /// 縦積みの画面（iPhone）で、開いた直後に見える位置まで送る部品。nil なら先頭のまま。
+        /// 縦積みでは FREQUENCY パネルが OUTPUT パネルの下にあるので、音名・和音モードの画面はそこまで送らないとパネルが写らない
         var scrollTarget: ContentView.Section? {
             switch self {
-            case .tutorialFrequency: return .frequency
+            case .tutorialFrequency, .note, .chord: return .frequency
             default: return nil
             }
         }
