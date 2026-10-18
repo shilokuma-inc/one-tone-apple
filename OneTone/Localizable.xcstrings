@@ -1121,78 +1121,78 @@
         }
       }
     },
-    "Frequency, volume, and waveform will return to %@ Hz, %lld%%, and %@." : {
+    "Frequency, volume, and waveform will return to %@ Hz, %lld%%, and %@, and the frequency mode to %@." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Frequency, volume, and waveform will return to %1$@ Hz, %2$lld%%, and %3$@."
+            "value" : "Frequency, volume, and waveform will return to %1$@ Hz, %2$lld%%, and %3$@, and the frequency mode to %4$@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "周波数・音量・波形を %1$@ Hz・%2$lld%%・%3$@ に戻します。"
+            "value" : "周波数・音量・波形を %1$@ Hz・%2$lld%%・%3$@ に、周波数の指定方法を %4$@ に戻します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "频率、音量和波形将恢复为 %1$@ Hz、%2$lld%% 和 %3$@。"
+            "value" : "频率、音量和波形将恢复为 %1$@ Hz、%2$lld%% 和 %3$@，频率模式将恢复为 %4$@。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "頻率、音量和波形將回復為 %1$@ Hz、%2$lld%% 和 %3$@。"
+            "value" : "頻率、音量和波形將回復為 %1$@ Hz、%2$lld%% 和 %3$@，頻率模式將回復為 %4$@。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "주파수, 음량, 파형이 %1$@ Hz, %2$lld%%, %3$@(으)로 돌아갑니다."
+            "value" : "주파수, 음량, 파형이 %1$@ Hz, %2$lld%%, %3$@(으)로, 주파수 모드가 %4$@(으)로 돌아갑니다."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La frecuencia, el volumen y la forma de onda volverán a %1$@ Hz, %2$lld %% y %3$@."
+            "value" : "La frecuencia, el volumen y la forma de onda volverán a %1$@ Hz, %2$lld %% y %3$@, y el modo de frecuencia a %4$@."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La fréquence, la forme d’onde et le volume reviendront à %1$@ Hz, %3$@ et %2$lld %%."
+            "value" : "La fréquence, la forme d’onde et le volume reviendront à %1$@ Hz, %3$@ et %2$lld %%, et le mode de fréquence à %4$@."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Frequenz, Lautstärke und Wellenform werden zurückgesetzt (%1$@ Hz, %2$lld %%, %3$@)."
+            "value" : "Frequenz, Lautstärke und Wellenform werden zurückgesetzt (%1$@ Hz, %2$lld %%, %3$@), der Frequenzmodus auf %4$@."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Frequenza, forma d’onda e volume torneranno a %1$@ Hz, %3$@ e %2$lld%%."
+            "value" : "Frequenza, forma d’onda e volume torneranno a %1$@ Hz, %3$@ e %2$lld%%, e la modalità di frequenza a %4$@."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A frequência, a forma de onda e o volume voltarão para %1$@ Hz, %3$@ e %2$lld%%."
+            "value" : "A frequência, a forma de onda e o volume voltarão para %1$@ Hz, %3$@ e %2$lld%%, e o modo de frequência para %4$@."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Частота, громкость и форма волны вернутся к значениям %1$@ Hz, %2$lld %% и %3$@."
+            "value" : "Частота, громкость и форма волны вернутся к значениям %1$@ Hz, %2$lld %% и %3$@, а режим частоты — к %4$@."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Frekuensi, volume, dan bentuk gelombang akan kembali ke %1$@ Hz, %2$lld%%, dan %3$@."
+            "value" : "Frekuensi, volume, dan bentuk gelombang akan kembali ke %1$@ Hz, %2$lld%%, dan %3$@, dan mode frekuensi ke %4$@."
           }
         }
       }
@@ -2043,6 +2043,76 @@
         }
       }
     },
+    "Pick a single note such as A4. The knob and slider move in semitones." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A4 のような音名で 1 音を選びます。ノブとスライダーは半音ずつ動きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 A4 等单个音名。旋钮和滑块按半音移动。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇 A4 等單一音名。旋鈕和滑桿以半音移動。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A4 같은 음이름으로 한 음을 고릅니다. 노브와 슬라이더는 반음씩 움직입니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige una sola nota, como A4. La perilla y el control deslizante se mueven por semitonos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez une seule note, comme A4. Le bouton et le curseur avancent par demi-tons."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen einzelnen Ton wie A4. Regler und Schieberegler bewegen sich in Halbtönen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli una singola nota, come A4. La manopola e il cursore si muovono a semitoni."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha uma única nota, como A4. O botão giratório e o controle deslizante se movem em semitons."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите одну ноту, например A4. Ручка и ползунок двигаются по полутонам."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih satu not, seperti A4. Kenop dan penggeser bergerak per semitone."
+          }
+        }
+      }
+    },
     "Pink" : {
       "localizations" : {
         "de" : {
@@ -2249,6 +2319,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "播放音調"
+          }
+        }
+      }
+    },
+    "Play a major or minor chord such as C or Am." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C や Am のようなメジャー・マイナーの和音を鳴らします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放 C 或 Am 等大三和弦或小三和弦。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放 C 或 Am 等大三和弦或小三和弦。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C나 Am 같은 메이저·마이너 화음을 연주합니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca un acorde mayor o menor, como C o Am."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jouez un accord majeur ou mineur, comme C ou Am."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spiele einen Dur- oder Moll-Akkord wie C oder Am."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suona un accordo maggiore o minore, come C o Am."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque um acorde maior ou menor, como C ou Am."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Играйте мажорный или минорный аккорд, например C или Am."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mainkan akor mayor atau minor, seperti C atau Am."
           }
         }
       }
@@ -2879,6 +3019,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "可設定 20 Hz 到 20 kHz 之間的任意頻率。轉動旋鈕、拖移滑桿、輸入數字，或點一下預設：100 Hz、440 Hz、1 kHz 或 10 kHz。"
+          }
+        }
+      }
+    },
+    "Set the tone by its frequency in hertz." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "周波数（Hz）で音を指定します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以赫兹为单位的频率指定音高。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以赫茲為單位的頻率指定音高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주파수(Hz)로 소리를 지정합니다."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajusta el tono por su frecuencia en hercios."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglez le son par sa fréquence en hertz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lege den Ton über seine Frequenz in Hertz fest."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imposta il suono in base alla sua frequenza in hertz."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Defina o som pela frequência em hertz."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задавайте звук частотой в герцах."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atur nada berdasarkan frekuensinya dalam hertz."
           }
         }
       }

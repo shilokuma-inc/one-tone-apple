@@ -232,7 +232,9 @@ final class ToneSettingsTests: XCTestCase {
         store.save(frequency: 15000)
         store.save(volume: 0.9)
         store.save(waveform: .sawtooth)
+        defaults.set(FrequencyMode.chord.rawValue, forKey: FrequencyMode.storageKey)
         store.reset()
+        XCTAssertNil(defaults.object(forKey: FrequencyMode.storageKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.frequencyKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.volumeKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.waveformKey))
@@ -263,7 +265,7 @@ final class ToneSettingsTests: XCTestCase {
 
     func testResetConfirmationUsesFormattedKey() {
         XCTAssertEqual(ToneSettingsResetConfirmation.title.key, "Reset to Defaults?")
-        XCTAssertEqual(ToneSettingsResetConfirmation.message.key, "Frequency, volume, and waveform will return to %@ Hz, %lld%%, and %@.")
+        XCTAssertEqual(ToneSettingsResetConfirmation.message.key, "Frequency, volume, and waveform will return to %@ Hz, %lld%%, and %@, and the frequency mode to %@.")
     }
 
     // MARK: - AudioManager への反映
