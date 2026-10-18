@@ -45,11 +45,13 @@ xcodebuild test -project OneTone.xcodeproj -scheme OneTone -destination 'platfor
 
 ### 訳さない文言
 
-大文字のラベル（`PLAY` / `STOP` / `VOLUME` / `LEVEL` / `FREQUENCY` / `OUTPUT` など）、波形名（Sine / Square / Triangle / Sawtooth）、アプリ名「One Tone」、単位記号（Hz / kHz / dB）は全言語で英語のまま出す。
+大文字のラベル（`PLAY` / `STOP` / `VOLUME` / `LEVEL` / `FREQUENCY` / `OUTPUT` / `FREQUENCY MODE` / 表示モードの `NOTE` / `CHORD` など）、波形名（Sine / Square / Triangle / Sawtooth）、アプリ名「One Tone」、単位記号（Hz / kHz / dB）、
+音名・コード名（`C` / `C#` / `A4` / `F#5` / `Am` / `F#m` など。12 平均律のシャープ表記。Discussion #219 Q6）は全言語で英語のまま出す。
 
 - `Text(verbatim: "PLAY")` で書く（catalog に載らないので訳の欠けにならない）
-- `DeckPanel(title:)` の見出しや `Waveform.displayName` のように `String` で受け渡しているものは、そのまま `String` にしておけば訳されない
-- 訳文の中で画面上のボタン名・波形名を指すときも英語のまま書く（例: ja「PLAY を押すと…」）
+- `DeckPanel(title:)` の見出しや `Waveform.displayName` / `FrequencyMode.label` / `MusicalNote.name` / `Chord.name` のように `String` で受け渡しているものは、そのまま `String` にしておけば訳されない
+- 訳文の中で画面上のボタン名・波形名・音名・コード名を指すときも英語のまま書く（例: ja「PLAY を押すと…」「C・G・Am のようなパッド」）。
+  ただし画面で訳しているボタン（和音の種類の Major / Minor など）を指すときは、その言語の画面の訳に合わせる（ja「メジャー／マイナー」）
 
 ### リンターが落ちたとき
 
