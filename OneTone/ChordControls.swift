@@ -28,6 +28,19 @@ enum ChordInput {
         ToneFrequencies(Array(chord.frequencies.prefix(ToneFrequencies.maxCount)))
     }
 
+    /// 根音を選び直したコード（種類はそのまま）
+    static func chord(_ chord: Chord, withRoot root: PitchClass) -> Chord {
+        Chord(root: root, quality: chord.quality)
+    }
+
+    /// 種類を選び直したコード（根音はそのまま）
+    static func chord(_ chord: Chord, withQuality quality: ChordQuality) -> Chord {
+        Chord(root: chord.root, quality: quality)
+    }
+
+    /// 根音のボタンの 1 段に並べる数（12 個を 2 段に）
+    static let rootsPerRow = 6
+
     /// 構成音の表記（`C4 · E4 · G4`）。音名は訳さない
     static func notesLabel(of chord: Chord) -> String {
         chord.notes.map(\.name).joined(separator: " · ")
@@ -78,10 +91,64 @@ struct ChordPadButtons: View {
     }
 }
 
+/// 根音（C〜B の 12 個）と種類（メジャー / マイナー）を組み合わせてコードを選ぶ。パッドに無いコードもここから選べる。
+/// 根音は 6 個ずつ 2 段に並べる。選択中は差し色の枠と太字・`.isSelected` で示す（色だけに頼らない）
+struct ChordBuilder: View {
+    let chord: Chord
+    let onSelect: (Chord) -> Void
+
+    private let rootColumns = Array(repeating: GridItem(.flexible(), spacing: 6), count: ChordInput.rootsPerRow)
+
+    var body: some View {
+        VStack(spacing: 10) {
+            LazyVGrid(columns: rootColumns, spacing: 6) {
+                ForEach(PitchClass.allCases) { root in
+                    let isSelected = root == chord.root
+                    Button {
+                        onSelect(ChordInput.chord(chord, withRoot: root))
+                    } label: {
+                        Text(verbatim: root.name)
+                            .font(.system(.callout, design: .rounded).weight(isSelected ? .bold : .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WaveformButtonStyle(isSelected: isSelected))
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach(ChordQuality.allCases) { quality in
+                    let isSelected = quality == chord.quality
+                    Button {
+                        onSelect(ChordInput.chord(chord, withQuality: quality))
+                    } label: {
+                        Text(quality.label)
+                            .font(.system(.callout, design: .rounded).weight(isSelected ? .bold : .medium))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WaveformButtonStyle(isSelected: isSelected))
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+        }
+        .frame(maxWidth: 440)
+        .padding(.horizontal)
+        .padding(.bottom)
+    }
+}
+
 #Preview("C を選択中") {
     VStack {
         ChordDisplay(chord: ChordInput.defaultChord)
         ChordPadButtons(chord: ChordInput.defaultChord, onSelect: { _ in })
+        ChordBuilder(chord: ChordInput.defaultChord, onSelect: { _ in })
     }
     .padding()
     .themedScreen()

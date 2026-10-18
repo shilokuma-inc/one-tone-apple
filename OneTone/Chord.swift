@@ -21,6 +21,14 @@ enum ChordQuality: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 根音と組み合わせて選ぶボタンの名前（訳す）
+    var label: LocalizedStringResource {
+        switch self {
+        case .major: return "Major"
+        case .minor: return "Minor"
+        }
+    }
+
     /// コード名で根音の後ろに付ける記号（`C` / `Cm`）。訳さないので `String` のままにしている
     var suffix: String {
         switch self {
