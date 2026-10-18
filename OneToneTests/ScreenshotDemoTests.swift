@@ -34,8 +34,9 @@ final class ScreenshotDemoTests: XCTestCase {
     }
 
     func testEachAppStoreSceneHasDistinctWaveform() {
-        // App Store の 3 枚のスクリーンショットで別々の波形を見せる前提なので、重複したら設定ミス
-        let waveforms = ScreenshotDemo.Scene.appStoreScenes.map(\.waveform)
+        // App Store の Hz モードの 3 枚で別々の波形を見せる前提なので、重複したら設定ミス
+        let waveforms = ScreenshotDemo.Scene.appStoreScenes.filter { $0.frequencyMode == .hertz }.map(\.waveform)
+        XCTAssertEqual(waveforms.count, 3)
         XCTAssertEqual(Set(waveforms).count, waveforms.count)
         for scene in ScreenshotDemo.Scene.allCases {
             XCTAssertTrue(FrequencyInput.range.contains(scene.frequency), "\(scene) の周波数が範囲外")
@@ -44,7 +45,43 @@ final class ScreenshotDemoTests: XCTestCase {
 
     func testAppStoreScenesKeepTheirLaunchNames() {
         // AppStore/screenshots.json の scene と一致させている名前なので、変わったら撮影が既定の画面に化ける
-        XCTAssertEqual(ScreenshotDemo.Scene.appStoreScenes.map(\.rawValue), ["sine", "square", "sawtooth"])
+        XCTAssertEqual(ScreenshotDemo.Scene.appStoreScenes.map(\.rawValue), ["sine", "square", "sawtooth", "note", "chord"])
+    }
+
+    /// App Store 用で Hz・音名・和音の 3 つのモードを見せる
+    func testAppStoreScenesShowEveryFrequencyMode() {
+        XCTAssertEqual(Set(ScreenshotDemo.Scene.appStoreScenes.map(\.frequencyMode)), Set(FrequencyMode.allCases))
+        XCTAssertEqual(ScreenshotDemo.Scene.note.frequencyMode, .note)
+        XCTAssertEqual(ScreenshotDemo.Scene.chord.frequencyMode, .chord)
+        // チュートリアルの画像は Hz モードのまま撮る
+        for scene in ScreenshotDemo.Scene.allCases where !ScreenshotDemo.Scene.appStoreScenes.contains(scene) {
+            XCTAssertEqual(scene.frequencyMode, .hertz, "\(scene)")
+        }
+    }
+
+    /// 音名モードのシーンはちょうどの音（C5）で、プリセットが選択中に見える
+    func testNoteSceneIsExactPresetNote() {
+        let note = NoteInput.note(for: ScreenshotDemo.Scene.note.frequency)
+        XCTAssertEqual(note.name, "C5")
+        XCTAssertEqual(ScreenshotDemo.Scene.note.frequency, NoteInput.snapped(ScreenshotDemo.Scene.note.frequency))
+        XCTAssertTrue(NoteInput.presets.contains(note))
+    }
+
+    /// 和音モードのシーンは Am で、パッドが選択中に見える
+    func testChordSceneShowsPadChord() {
+        XCTAssertEqual(ScreenshotDemo.Scene.chord.chord.name, "Am")
+        XCTAssertTrue(ChordInput.pads.contains(ScreenshotDemo.Scene.chord.chord))
+        for scene in ScreenshotDemo.Scene.allCases where scene != .chord {
+            XCTAssertEqual(scene.chord, ChordInput.defaultChord, "\(scene)")
+        }
+    }
+
+    func testAudioManagerForChordScenePresentsChord() {
+        let manager = AudioManager.forScreenshot(.chord)
+        XCTAssertTrue(manager.isPlaying)
+        XCTAssertFalse(manager.audioEngine.isRunning)
+        XCTAssertEqual(manager.currentFrequencies, ChordInput.frequencies(of: Chord(root: .a, quality: .minor)))
+        XCTAssertEqual(manager.currentWaveform, .sine)
     }
 
     func testTutorialScenesCoverEveryTutorialPage() {
@@ -59,9 +96,13 @@ final class ScreenshotDemoTests: XCTestCase {
         XCTAssertTrue(FrequencyInput.presets.contains(ScreenshotDemo.Scene.tutorialFrequency.frequency), "プリセットが選択中に見えない")
         XCTAssertLessThan(ScreenshotDemo.Scene.tutorialVolume.volume, 0.5)
         XCTAssertEqual(ScreenshotDemo.Scene.tutorialWaveform.waveform, .triangle)
-        for scene in ScreenshotDemo.Scene.appStoreScenes {
+        // Hz モードの 3 枚は先頭のまま（既存の画像の見た目を変えない）
+        for scene in ScreenshotDemo.Scene.appStoreScenes where scene.frequencyMode == .hertz {
             XCTAssertNil(scene.scrollTarget, "App Store 用の \(scene) の見た目が変わる")
         }
+        // 音名・和音モードの画面は、縦積み（iPhone）で FREQUENCY パネルが写る位置まで送る
+        XCTAssertEqual(ScreenshotDemo.Scene.note.scrollTarget, .frequency)
+        XCTAssertEqual(ScreenshotDemo.Scene.chord.scrollTarget, .frequency)
     }
 
     func testPresentAsPlayingFillsOutputHistoryWithoutAudioEngine() {

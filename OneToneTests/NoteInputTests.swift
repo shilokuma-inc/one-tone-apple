@@ -115,8 +115,11 @@ final class NoteInputTests: XCTestCase {
         XCTAssertEqual(FrequencyMode.stored(in: defaults), .hertz)
     }
 
-    func testScreenshotDemoAlwaysUsesHertz() {
-        XCTAssertEqual(FrequencyMode.displayed(stored: .note, isScreenshotDemo: true), .hertz)
-        XCTAssertEqual(FrequencyMode.displayed(stored: .note, isScreenshotDemo: false), .note)
+    /// 撮影モードでは保存値ではなくシーンのモードで撮る
+    func testScreenshotDemoUsesSceneMode() {
+        XCTAssertEqual(FrequencyMode.displayed(stored: .note, screenshotScene: .sine), .hertz)
+        XCTAssertEqual(FrequencyMode.displayed(stored: .hertz, screenshotScene: .chord), .chord)
+        XCTAssertEqual(FrequencyMode.displayed(stored: .chord, screenshotScene: .note), .note)
+        XCTAssertEqual(FrequencyMode.displayed(stored: .note, screenshotScene: nil), .note)
     }
 }

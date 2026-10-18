@@ -127,10 +127,11 @@ final class ToneSettingsTests: XCTestCase {
         store.save(frequency: 15000)
         store.save(volume: 1)
         store.save(waveform: .sawtooth)
+        store.save(chord: Chord(root: .b, quality: .minor))
 
         for scene in ScreenshotDemo.Scene.allCases {
             let initial = ToneSettings.initial(screenshotScene: scene, store: store)
-            XCTAssertEqual(initial.settings, ToneSettings(frequency: scene.frequency, volume: scene.volume, waveform: scene.waveform), "\(scene)")
+            XCTAssertEqual(initial.settings, ToneSettings(frequency: scene.frequency, volume: scene.volume, waveform: scene.waveform, chord: scene.chord), "\(scene)")
             // 撮影モードでは保存値が上限を超えていても制限せず、ダイアログも出さない
             XCTAssertFalse(initial.volumeWasCapped, "\(scene)")
         }
@@ -143,6 +144,9 @@ final class ToneSettingsTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.frequencyKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.volumeKey))
         XCTAssertNil(defaults.object(forKey: ToneSettingsStore.waveformKey))
+        XCTAssertNil(defaults.object(forKey: ToneSettingsStore.chordRootKey))
+        XCTAssertNil(defaults.object(forKey: ToneSettingsStore.chordQualityKey))
+        XCTAssertNil(defaults.object(forKey: FrequencyMode.storageKey))
     }
 
     func testInitialSettingsOutsideScreenshotModeComeFromStore() {
