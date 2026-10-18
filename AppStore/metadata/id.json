@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "Putar nada dengan tinggi nada yang Anda suka dan fokuslah pada pekerjaan!\nAnda dapat memutar suara dari 20 Hz hingga 20.000 Hz.",
+  "description": "Putar nada dengan tinggi nada yang Anda suka dan fokuslah pada pekerjaan!\nAnda dapat memutar suara dari 20 Hz hingga 20.000 Hz.\nDi mode NOTE, pilih not seperti A4 atau C#5. Kenop dan penggeser bergerak per semitone, sehingga nada yang terdengar selalu tepat.\nDi mode CHORD, mainkan akor mayor dan minor seperti C, G, dan Am dengan sekali ketuk.",
   "keywords": [
     "onetone",
     "suara",

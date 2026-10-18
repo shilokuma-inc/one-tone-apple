@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "Toque um som na altura que você quiser e concentre-se no seu trabalho!\nVocê pode tocar sons de 20 Hz a 20.000 Hz.",
+  "description": "Toque um som na altura que você quiser e concentre-se no seu trabalho!\nVocê pode tocar sons de 20 Hz a 20.000 Hz.\nNo modo NOTE, escolha uma nota como A4 ou C#5. O botão giratório e o controle deslizante se movem em semitons, então você sempre ouve a afinação exata.\nNo modo CHORD, toque acordes maiores e menores como C, G e Am com um toque.",
   "keywords": [
     "onetone",
     "som",

@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "Play a tone at any pitch you like and focus on your work!\nYou can play sounds from 20 Hz to 20,000 Hz.",
+  "description": "Play a tone at any pitch you like and focus on your work!\nYou can play sounds from 20 Hz to 20,000 Hz.\nSwitch to NOTE mode to pick a note such as A4 or C#5. The knob and slider move in semitones, so you always hear the exact pitch.\nIn CHORD mode, play major and minor chords such as C, G, and Am with a tap.",
   "keywords": [
     "onetone",
     "sound",

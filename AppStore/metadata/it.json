@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "Riproduci un suono all’altezza che preferisci e concentrati sul tuo lavoro!\nPuoi riprodurre suoni da 20 Hz a 20.000 Hz.",
+  "description": "Riproduci un suono all’altezza che preferisci e concentrati sul tuo lavoro!\nPuoi riprodurre suoni da 20 Hz a 20.000 Hz.\nIn modalità NOTE scegli una nota come A4 o C#5. La manopola e il cursore si muovono a semitoni, così senti sempre l’altezza esatta.\nIn modalità CHORD suoni con un tocco accordi maggiori e minori come C, G e Am.",
   "keywords": [
     "onetone",
     "suono",

@@ -4,7 +4,7 @@
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
-  "description": "播放你喜歡的音高，專注於工作吧！\n可以播放 20 Hz 到 20,000 Hz 的聲音。",
+  "description": "播放你喜歡的音高，專注於工作吧！\n可以播放 20 Hz 到 20,000 Hz 的聲音。\n切換到 NOTE 模式，可以依 A4、C#5 等音名選擇音高。旋鈕和滑桿以半音移動，始終發出準確的音高。\n在 CHORD 模式下，輕點即可播放 C、G、Am 等大三和弦與小三和弦。",
   "keywords": [
     "onetone",
     "聲音",
