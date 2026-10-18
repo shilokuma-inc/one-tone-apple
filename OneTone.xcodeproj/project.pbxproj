@@ -53,11 +53,13 @@
 		7B2D4F6A1C3E5A7B9D0F1A01 /* Tutorial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A02 /* Tutorial.swift */; };
 		5C1E7A2B3D4F6A8B9C0D1E01 /* ToneSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C1E7A2B3D4F6A8B9C0D1E02 /* ToneSettings.swift */; };
 		7D2F8A3C4B5E6F7081920A01 /* MusicalNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2F8A3C4B5E6F7081920A02 /* MusicalNote.swift */; };
+		7D2F8A3C4B5E6F7081920A05 /* Chord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2F8A3C4B5E6F7081920A06 /* Chord.swift */; };
 		7B2D4F6A1C3E5A7B9D0F1A05 /* TutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A06 /* TutorialView.swift */; };
 		7B2D4F6A1C3E5A7B9D0F1A07 /* TutorialButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A08 /* TutorialButton.swift */; };
 		7B2D4F6A1C3E5A7B9D0F1A03 /* TutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A04 /* TutorialTests.swift */; };
 		5C1E7A2B3D4F6A8B9C0D1E03 /* ToneSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C1E7A2B3D4F6A8B9C0D1E04 /* ToneSettingsTests.swift */; };
 		7D2F8A3C4B5E6F7081920A03 /* MusicalNoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2F8A3C4B5E6F7081920A04 /* MusicalNoteTests.swift */; };
+		7D2F8A3C4B5E6F7081920A07 /* ChordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2F8A3C4B5E6F7081920A08 /* ChordTests.swift */; };
 		7B2D4F6A1C3E5A7B9D0F1A09 /* TutorialTrialPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A0A /* TutorialTrialPlayer.swift */; };
 		7B2D4F6A1C3E5A7B9D0F1A0B /* TutorialTrialPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B2D4F6A1C3E5A7B9D0F1A0C /* TutorialTrialPlayerTests.swift */; };
 		5A1C3E7D2F0B4A6E9C8D1B22 /* ScreenshotDemoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1C3E7D2F0B4A6E9C8D1B23 /* ScreenshotDemoTests.swift */; };
@@ -108,11 +110,13 @@
 		7B2D4F6A1C3E5A7B9D0F1A02 /* Tutorial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tutorial.swift; sourceTree = "<group>"; };
 		5C1E7A2B3D4F6A8B9C0D1E02 /* ToneSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneSettings.swift; sourceTree = "<group>"; };
 		7D2F8A3C4B5E6F7081920A02 /* MusicalNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicalNote.swift; sourceTree = "<group>"; };
+		7D2F8A3C4B5E6F7081920A06 /* Chord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chord.swift; sourceTree = "<group>"; };
 		7B2D4F6A1C3E5A7B9D0F1A06 /* TutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialView.swift; sourceTree = "<group>"; };
 		7B2D4F6A1C3E5A7B9D0F1A08 /* TutorialButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialButton.swift; sourceTree = "<group>"; };
 		7B2D4F6A1C3E5A7B9D0F1A04 /* TutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTests.swift; sourceTree = "<group>"; };
 		5C1E7A2B3D4F6A8B9C0D1E04 /* ToneSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneSettingsTests.swift; sourceTree = "<group>"; };
 		7D2F8A3C4B5E6F7081920A04 /* MusicalNoteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicalNoteTests.swift; sourceTree = "<group>"; };
+		7D2F8A3C4B5E6F7081920A08 /* ChordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChordTests.swift; sourceTree = "<group>"; };
 		7B2D4F6A1C3E5A7B9D0F1A0A /* TutorialTrialPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTrialPlayer.swift; sourceTree = "<group>"; };
 		7B2D4F6A1C3E5A7B9D0F1A0C /* TutorialTrialPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTrialPlayerTests.swift; sourceTree = "<group>"; };
 		5A1C3E7D2F0B4A6E9C8D1B23 /* ScreenshotDemoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemoTests.swift; sourceTree = "<group>"; };
@@ -212,6 +216,7 @@
 				7B2D4F6A1C3E5A7B9D0F1A02 /* Tutorial.swift */,
 				5C1E7A2B3D4F6A8B9C0D1E02 /* ToneSettings.swift */,
 				7D2F8A3C4B5E6F7081920A02 /* MusicalNote.swift */,
+				7D2F8A3C4B5E6F7081920A06 /* Chord.swift */,
 				7B2D4F6A1C3E5A7B9D0F1A06 /* TutorialView.swift */,
 				7B2D4F6A1C3E5A7B9D0F1A0A /* TutorialTrialPlayer.swift */,
 				7B2D4F6A1C3E5A7B9D0F1A08 /* TutorialButton.swift */,
@@ -256,6 +261,7 @@
 				7B2D4F6A1C3E5A7B9D0F1A04 /* TutorialTests.swift */,
 				5C1E7A2B3D4F6A8B9C0D1E04 /* ToneSettingsTests.swift */,
 				7D2F8A3C4B5E6F7081920A04 /* MusicalNoteTests.swift */,
+				7D2F8A3C4B5E6F7081920A08 /* ChordTests.swift */,
 				7B2D4F6A1C3E5A7B9D0F1A0C /* TutorialTrialPlayerTests.swift */,
 				D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */,
 				CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */,
@@ -449,6 +455,7 @@
 				7B2D4F6A1C3E5A7B9D0F1A01 /* Tutorial.swift in Sources */,
 				5C1E7A2B3D4F6A8B9C0D1E01 /* ToneSettings.swift in Sources */,
 				7D2F8A3C4B5E6F7081920A01 /* MusicalNote.swift in Sources */,
+				7D2F8A3C4B5E6F7081920A05 /* Chord.swift in Sources */,
 				7B2D4F6A1C3E5A7B9D0F1A05 /* TutorialView.swift in Sources */,
 				7B2D4F6A1C3E5A7B9D0F1A09 /* TutorialTrialPlayer.swift in Sources */,
 				7B2D4F6A1C3E5A7B9D0F1A07 /* TutorialButton.swift in Sources */,
@@ -472,6 +479,7 @@
 				7B2D4F6A1C3E5A7B9D0F1A03 /* TutorialTests.swift in Sources */,
 				5C1E7A2B3D4F6A8B9C0D1E03 /* ToneSettingsTests.swift in Sources */,
 				7D2F8A3C4B5E6F7081920A03 /* MusicalNoteTests.swift in Sources */,
+				7D2F8A3C4B5E6F7081920A07 /* ChordTests.swift in Sources */,
 				7B2D4F6A1C3E5A7B9D0F1A0B /* TutorialTrialPlayerTests.swift in Sources */,
 				407D703CBB65FE821F124499 /* AudioOutputTapTests.swift in Sources */,
 				D1BD1C8BB4E363C1197FE6A7 /* SampleRingBufferTests.swift in Sources */,
