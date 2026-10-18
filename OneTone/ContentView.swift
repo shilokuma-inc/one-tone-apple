@@ -51,12 +51,15 @@ struct ContentView: View {
         if launchMode == .note {
             initial.frequency = NoteInput.snapped(initial.frequency)
         }
-        let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
-        // 和音モードで起動するときは、コードの構成音を鳴らす準備をしておく
-        if launchMode == .chord {
-            manager.updateFrequencies(ChordInput.frequencies(of: ChordInput.defaultChord))
-        }
-        _audioManager = StateObject(wrappedValue: manager)
+        // `StateObject` の自動クロージャの中で作る（View の寿命で 1 回だけ作られ、init が呼び直されても余分に作らない）
+        _audioManager = StateObject(wrappedValue: {
+            let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
+            // 和音モードで起動するときは、コードの構成音を鳴らす準備をしておく
+            if launchMode == .chord {
+                manager.updateFrequencies(ChordInput.frequencies(of: ChordInput.defaultChord))
+            }
+            return manager
+        }())
         _frequency = State(initialValue: initial.frequency)
         _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
         _volume = State(initialValue: initial.volume)
@@ -356,6 +359,8 @@ struct ContentView: View {
         frequencyText = FrequencyInput.format(settings.frequency)
         volume = settings.volume
         waveform = settings.waveform
+        // RESET ではモードが Hz に戻るので、和音モードで選んでいたコードも既定に戻す
+        chord = ChordInput.defaultChord
         audioManager.apply(settings)
     }
 
