@@ -1,0 +1,53 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+      - '!develop'
+      # assets/** は PR 用スクリーンショットの置き場でアプリのコードを含まないため除外する
+      - '!assets/**'
+
+concurrency:
+  group: build-working-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: working (${{ matrix.platform }})
+    runs-on: macos-latest
+
+    # macOS と iOS は同じターゲットの Supported Destinations 違いなので、両方をビルドして確認する
+    # 片方が落ちてももう片方の結果を見たいので fail-fast は無効にする
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            destination: platform=macOS
+          - platform: iOS
+            destination: generic/platform=iOS Simulator
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ci_post_clone
+        run: |
+          defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+
+      # macOS はランナー自身が、iOS はシミュレータが実行先になる
+      # iOS の destination はランナーに入っている機種名に依存しないよう総称指定にしている
+      # CI には署名証明書が無いため署名は行わない（ビルドの成否確認のみが目的）
+      - name: Build
+        run: |
+          xcodebuild build-for-testing \
+            -project OneTone.xcodeproj \
+            -scheme OneTone \
+            -destination '${{ matrix.destination }}' \
+            CODE_SIGNING_ALLOWED=NO

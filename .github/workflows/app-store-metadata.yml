@@ -1,0 +1,163 @@
+name: Metadata/App Store
+
+# App Store の説明文・キーワード・プロモーションテキスト・URL・審査メモを App Store Connect に反映する。
+#
+# 元ネタは AppStore/metadata/<言語>.json と shared.json。review_notes.txt があれば、
+# App Review Information の Notes（審査メモ。言語によらず 1 つ）にも書き込む。欠損と文字数超過は
+# Verify/App Store metadata が PR の時点で落とすので、ここまで来たものは通る前提。
+#
+# このアプリは iOS と macOS を同じ Bundle ID で配信しているが、App Store Connect のバージョン（と説明文）は
+# platform ごとに別物。platform で反映先を選ぶ（既定は both = 両方に同じ内容を書く）。
+#
+# 反映先は「編集できる状態のバージョン」だけ。審査中・配信済みのバージョンには触らない。
+# mode:
+#   dry-run … App Store Connect の現在値との差分だけを出して何も書き込まない（既定）
+#   upload  … 書き込む
+#   export  … App Store Connect の現在値を AppStore/metadata の JSON 形式で書き出す（Job Summary と artifact に出す）。
+#             初回は、これで現在値を取り込んでから dry-run で差分ゼロを確かめる
+# スクリーンショットと違って撮影が要らないので数十秒で終わる。
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '動作。dry-run: 差分だけ出す / upload: 書き込む / export: 現在値を JSON に書き出す'
+        type: choice
+        options:
+          - dry-run
+          - upload
+          - export
+        default: dry-run
+      platform:
+        description: '反映先のプラットフォーム（App Store Connect のバージョンは iOS / macOS で別）'
+        type: choice
+        options:
+          - both
+          - ios
+          - macos
+        default: both
+      languages:
+        description: '反映する言語（カンマ区切り）。空なら languages.json の全言語（ja）'
+        required: false
+        default: ''
+      app_version:
+        description: '反映先のバージョン。空なら編集できるバージョンを自動で選ぶ'
+        required: false
+        default: ''
+      missing_locales:
+        description: 'App Store Connect にその言語が無いときの扱い'
+        type: choice
+        options:
+          - fail
+          - skip
+          - create
+        default: fail
+
+jobs:
+  metadata:
+    name: ${{ inputs.mode || 'dry-run' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # export は手元の JSON を読まない（まだ無いこともある）ので検査を飛ばす
+      - name: Verify metadata
+        if: ${{ inputs.mode != 'export' }}
+        env:
+          LANGUAGES: ${{ inputs.languages }}
+        run: |
+          set -euo pipefail
+          options=()
+          if [ -n "$LANGUAGES" ]; then
+            options+=(--languages "$LANGUAGES")
+          fi
+          python3 Tools/upload_metadata.py --check ${options[@]+"${options[@]}"}
+
+      - name: Create Private Key
+        run: |
+          set -euo pipefail
+          mkdir -p private_keys
+          echo -n '${{ secrets.APPLE_API_KEY_BASE64 }}' | base64 --decode > private_keys/AuthKey.p8
+
+      - name: Run against App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY_PATH: private_keys/AuthKey.p8
+          # workflow_dispatch 以外から動いたときは choice の既定値に揃える
+          MODE: ${{ inputs.mode || 'dry-run' }}
+          PLATFORM: ${{ inputs.platform || 'both' }}
+          LANGUAGES: ${{ inputs.languages }}
+          APP_VERSION: ${{ inputs.app_version }}
+          MISSING_LOCALES: ${{ inputs.missing_locales || 'fail' }}
+        run: |
+          set -euo pipefail
+          # PyJWT は標準では入っていないので、この実行かぎりの venv に入れる
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --disable-pip-version-check pyjwt cryptography
+
+          options=(--platform "$PLATFORM" --missing-locales "$MISSING_LOCALES")
+          if [ -n "$LANGUAGES" ]; then
+            options+=(--languages "$LANGUAGES")
+          fi
+          if [ -n "$APP_VERSION" ]; then
+            options+=(--app-version "$APP_VERSION")
+          fi
+          case "$MODE" in
+            dry-run) options+=(--dry-run) ;;
+            export) options+=(--export) ;;
+            upload) ;;
+            *) echo "::error::不明な mode: $MODE"; exit 1 ;;
+          esac
+
+          # bundle id は project.pbxproj から読む（ワークフローに書き写すと二重管理になるため）
+          .venv/bin/python -u Tools/upload_metadata.py "${options[@]}" | tee "$RUNNER_TEMP/upload.log"
+
+      # export の結果はコミットせず artifact に出す。中身を見て、リポジトリの AppStore/metadata に取り込む
+      - name: Upload exported metadata as artifact
+        if: ${{ always() && inputs.mode == 'export' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-store-metadata
+          path: AppStore/metadata
+          if-no-files-found: warn
+
+      - name: Summary
+        if: always()
+        env:
+          MODE: ${{ inputs.mode || 'dry-run' }}
+          PLATFORM: ${{ inputs.platform || 'both' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## App Store のメタデータ"
+            echo
+            echo "- mode: ${MODE}"
+            echo "- platform: ${PLATFORM}"
+            echo
+            if [ -f "$RUNNER_TEMP/upload.log" ]; then
+              echo '```diff'
+              cat "$RUNNER_TEMP/upload.log"
+              echo '```'
+            fi
+            if [ "$MODE" = "export" ]; then
+              for file in AppStore/metadata/*.json; do
+                [ -f "$file" ] || continue
+                echo
+                echo "### ${file}"
+                echo '```json'
+                cat "$file"
+                echo '```'
+              done
+              if [ -f AppStore/metadata/review_notes.txt ]; then
+                echo
+                echo "### AppStore/metadata/review_notes.txt"
+                echo '```text'
+                cat AppStore/metadata/review_notes.txt
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

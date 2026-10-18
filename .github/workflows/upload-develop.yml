@@ -1,0 +1,98 @@
+name: Upload/develop
+
+on:
+  push:
+    branches: develop
+
+concurrency:
+  group: upload-develop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upload:
+    name: develop (${{ matrix.platform }})
+    runs-on: macos-latest
+
+    # 成果物の形式と配信先の種別がプラットフォームごとに異なるため、matrix にまとめて切り替える
+    # 片方が落ちてももう片方は配信したいので fail-fast は無効にする
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            sdk: macosx
+            package: OneTone.pkg
+            altool_type: macos
+            # 署名しないと entitlements が埋め込まれず、書き出し時の再署名でも付かないため
+            # App Sandbox 未設定として弾かれる。ad-hoc 署名で entitlements だけ埋め込んでおく
+            signing: CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER=
+          - platform: iOS
+            sdk: iphoneos
+            package: OneTone.ipa
+            altool_type: ios
+            # iOS は書き出し時にプロビジョニングプロファイルから entitlements が付与される
+            signing: CODE_SIGNING_ALLOWED=NO
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ci_post_clone
+        run: |
+          defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+
+      # 配布用の署名は書き出し時にまとめて行うので、アーカイブ時は配布用証明書で署名しない
+      # ビルド番号は UTC の日時（YYYYMMDD.HHMMSS）にする。run_number はワークフローごとに 1 から数えるため、
+      # 手動アップロード済みの番号や develop / release 間で衝突し、既存より小さい番号として弾かれる
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project OneTone.xcodeproj \
+            -scheme OneTone \
+            -sdk ${{ matrix.sdk }} \
+            -configuration Release \
+            -archivePath build.xcarchive \
+            ${{ matrix.signing }} \
+            CURRENT_PROJECT_VERSION=$(date -u +%Y%m%d.%H%M%S)
+
+      # .pkg / .ipa のどちらが書き出されるかは plist ではなくアーカイブのプラットフォームで決まるため、
+      # ExportOptions.plist は macOS と iOS で共用できる（macOS 固有キーは iOS では無視される）。
+      # ただし signingStyle=manual で provisioningProfiles を明示すると片方しか解決できず失敗する
+      - name: Create ExportOptions.plist
+        run: |
+          echo '${{ secrets.EXPORT_OPTIONS }}' > ExportOptions.plist
+
+      # altool は ./private_keys/AuthKey_<Key ID>.p8 を自動で探すので、ファイル名は Key ID にする
+      - name: Create Private Key
+        run: |
+          mkdir private_keys
+          echo -n '${{ secrets.APPLE_API_KEY_BASE64 }}' | base64 --decode > ./private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - name: Export package
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$(pwd)/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
+            -authenticationKeyID ${{ secrets.APPLE_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APPLE_API_ISSUER_ID }}
+
+      # 書き出しと同じ API キーで認証する。Apple ID 認証は Bundle ID からチームを逆引きするため、
+      # App Store Connect にアプリが無いと「provider public id を決定できない」で止まる
+      - name: Upload package to App Store Connect
+        run: |
+          xcrun altool --upload-app -f export/${{ matrix.package }} --type ${{ matrix.altool_type }} \
+            --apiKey ${{ secrets.APPLE_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APPLE_API_ISSUER_ID }}
+
+      - name: Upload package to GitHub
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.package }}
+          path: export/${{ matrix.package }}

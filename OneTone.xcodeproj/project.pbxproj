@@ -15,6 +15,27 @@
 		4F3564B92C04ED740015F5B5 /* OneToneUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3564B82C04ED740015F5B5 /* OneToneUITests.swift */; };
 		4F3564BB2C04ED740015F5B5 /* OneToneUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3564BA2C04ED740015F5B5 /* OneToneUITestsLaunchTests.swift */; };
 		4F3564C82C04F2110015F5B5 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3564C72C04F2110015F5B5 /* AudioManager.swift */; };
+		7BB99970DCC99ACA4767B00E /* TitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45A8FADF45C3FC1276BA4C4 /* TitleView.swift */; };
+		F1D7555590C9E09C32231217 /* PlaybackControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845DEFE340AD8435DBE5E579 /* PlaybackControls.swift */; };
+		4B12240B8524B1F3459B0390 /* FrequencyControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA79D86B32324230989DFE6D /* FrequencyControls.swift */; };
+		A0EBB35CA758B162AA7E3614 /* FrequencyPresetButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473F5BAFBCEBC59D8915A390 /* FrequencyPresetButtons.swift */; };
+		3CED587896C10CC48032FB58 /* VolumeControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 021BD47CEE205813A718328A /* VolumeControl.swift */; };
+		481F0AD1F62F3F8054A85E76 /* WaveformPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A470FA42F175C2AACE62DA15 /* WaveformPicker.swift */; };
+		DA5CD492011D1C2A9423EAA8 /* SampleRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F4CF62B2D93FFBC0B96FF58 /* SampleRingBuffer.swift */; };
+		D1BD1C8BB4E363C1197FE6A7 /* SampleRingBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */; };
+		407D703CBB65FE821F124499 /* AudioOutputTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */; };
+		AFE1C6798A21DAD499BD65D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD16F17D9D3AE4C740823B6 /* Theme.swift */; };
+		42F1309F6F943FB2CD8164ED /* NeonGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD510FE5B23A742588DF144E /* NeonGlow.swift */; };
+		2714CAA32BB91936606E2F40 /* NeonGlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5ECEF63C029A8173D88CF98 /* NeonGlowTests.swift */; };
+		74086856C730017FF3AC29F5 /* FrequencyKnob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C16C753EC9240FC9BC1DA7D /* FrequencyKnob.swift */; };
+		A4791AB12D480A8316C2C8FF /* FrequencyKnobTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57429F39C3E80FA45607352 /* FrequencyKnobTests.swift */; };
+		6BDA8009A73A5CCE05F743CC /* LevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 253C567AE131AB52121000D3 /* LevelMeterView.swift */; };
+		B29237D025CA867A2059046B /* LevelMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4770691A15EEEF905F9BF0 /* LevelMeterTests.swift */; };
+		AB3E1AAE7D84B3D6FDF5A0F3 /* OscilloscopeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F13AA3B89F77879B58B2BFE /* OscilloscopeView.swift */; };
+		CA73C009F7893EE00FD344FF /* OscilloscopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E4275C0D7BA2BE7ED243D1 /* OscilloscopeTests.swift */; };
+		4F6D89545B41775C2458796C /* DeckPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F8FA390292E0DE907B7E48 /* DeckPanel.swift */; };
+		5A1C3E7D2F0B4A6E9C8D1B20 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1C3E7D2F0B4A6E9C8D1B21 /* ScreenshotDemo.swift */; };
+		5A1C3E7D2F0B4A6E9C8D1B22 /* ScreenshotDemoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1C3E7D2F0B4A6E9C8D1B23 /* ScreenshotDemoTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +68,27 @@
 		4F3564B82C04ED740015F5B5 /* OneToneUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneToneUITests.swift; sourceTree = "<group>"; };
 		4F3564BA2C04ED740015F5B5 /* OneToneUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneToneUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		4F3564C72C04F2110015F5B5 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
+		A45A8FADF45C3FC1276BA4C4 /* TitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleView.swift; sourceTree = "<group>"; };
+		5A1C3E7D2F0B4A6E9C8D1B21 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
+		5A1C3E7D2F0B4A6E9C8D1B23 /* ScreenshotDemoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemoTests.swift; sourceTree = "<group>"; };
+		845DEFE340AD8435DBE5E579 /* PlaybackControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControls.swift; sourceTree = "<group>"; };
+		FA79D86B32324230989DFE6D /* FrequencyControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencyControls.swift; sourceTree = "<group>"; };
+		473F5BAFBCEBC59D8915A390 /* FrequencyPresetButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencyPresetButtons.swift; sourceTree = "<group>"; };
+		021BD47CEE205813A718328A /* VolumeControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeControl.swift; sourceTree = "<group>"; };
+		A470FA42F175C2AACE62DA15 /* WaveformPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformPicker.swift; sourceTree = "<group>"; };
+		2F4CF62B2D93FFBC0B96FF58 /* SampleRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleRingBuffer.swift; sourceTree = "<group>"; };
+		CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleRingBufferTests.swift; sourceTree = "<group>"; };
+		D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioOutputTapTests.swift; sourceTree = "<group>"; };
+		CCD16F17D9D3AE4C740823B6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		BD510FE5B23A742588DF144E /* NeonGlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeonGlow.swift; sourceTree = "<group>"; };
+		B5ECEF63C029A8173D88CF98 /* NeonGlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeonGlowTests.swift; sourceTree = "<group>"; };
+		3C16C753EC9240FC9BC1DA7D /* FrequencyKnob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencyKnob.swift; sourceTree = "<group>"; };
+		C57429F39C3E80FA45607352 /* FrequencyKnobTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequencyKnobTests.swift; sourceTree = "<group>"; };
+		253C567AE131AB52121000D3 /* LevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterView.swift; sourceTree = "<group>"; };
+		FB4770691A15EEEF905F9BF0 /* LevelMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelMeterTests.swift; sourceTree = "<group>"; };
+		0F13AA3B89F77879B58B2BFE /* OscilloscopeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OscilloscopeView.swift; sourceTree = "<group>"; };
+		40E4275C0D7BA2BE7ED243D1 /* OscilloscopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OscilloscopeTests.swift; sourceTree = "<group>"; };
+		C0F8FA390292E0DE907B7E48 /* DeckPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +139,20 @@
 		4F35649B2C04ED720015F5B5 /* OneTone */ = {
 			isa = PBXGroup;
 			children = (
+				C0F8FA390292E0DE907B7E48 /* DeckPanel.swift */,
+				0F13AA3B89F77879B58B2BFE /* OscilloscopeView.swift */,
+				253C567AE131AB52121000D3 /* LevelMeterView.swift */,
+				3C16C753EC9240FC9BC1DA7D /* FrequencyKnob.swift */,
+				BD510FE5B23A742588DF144E /* NeonGlow.swift */,
+				CCD16F17D9D3AE4C740823B6 /* Theme.swift */,
+				2F4CF62B2D93FFBC0B96FF58 /* SampleRingBuffer.swift */,
+				A470FA42F175C2AACE62DA15 /* WaveformPicker.swift */,
+				021BD47CEE205813A718328A /* VolumeControl.swift */,
+				473F5BAFBCEBC59D8915A390 /* FrequencyPresetButtons.swift */,
+				FA79D86B32324230989DFE6D /* FrequencyControls.swift */,
+				845DEFE340AD8435DBE5E579 /* PlaybackControls.swift */,
+				A45A8FADF45C3FC1276BA4C4 /* TitleView.swift */,
+				5A1C3E7D2F0B4A6E9C8D1B21 /* ScreenshotDemo.swift */,
 				4F35649C2C04ED720015F5B5 /* OneToneApp.swift */,
 				4F35649E2C04ED720015F5B5 /* ContentView.swift */,
 				4F3564C72C04F2110015F5B5 /* AudioManager.swift */,
@@ -118,6 +174,13 @@
 		4F3564AD2C04ED740015F5B5 /* OneToneTests */ = {
 			isa = PBXGroup;
 			children = (
+				40E4275C0D7BA2BE7ED243D1 /* OscilloscopeTests.swift */,
+				FB4770691A15EEEF905F9BF0 /* LevelMeterTests.swift */,
+				C57429F39C3E80FA45607352 /* FrequencyKnobTests.swift */,
+				B5ECEF63C029A8173D88CF98 /* NeonGlowTests.swift */,
+				5A1C3E7D2F0B4A6E9C8D1B23 /* ScreenshotDemoTests.swift */,
+				D0973AB3BCFCB499DB02709E /* AudioOutputTapTests.swift */,
+				CCFC38CB04B067663CAF98D8 /* SampleRingBufferTests.swift */,
 				4F3564AE2C04ED740015F5B5 /* OneToneTests.swift */,
 			);
 			path = OneToneTests;
@@ -262,6 +325,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4F6D89545B41775C2458796C /* DeckPanel.swift in Sources */,
+				AB3E1AAE7D84B3D6FDF5A0F3 /* OscilloscopeView.swift in Sources */,
+				6BDA8009A73A5CCE05F743CC /* LevelMeterView.swift in Sources */,
+				74086856C730017FF3AC29F5 /* FrequencyKnob.swift in Sources */,
+				42F1309F6F943FB2CD8164ED /* NeonGlow.swift in Sources */,
+				AFE1C6798A21DAD499BD65D4 /* Theme.swift in Sources */,
+				DA5CD492011D1C2A9423EAA8 /* SampleRingBuffer.swift in Sources */,
+				481F0AD1F62F3F8054A85E76 /* WaveformPicker.swift in Sources */,
+				3CED587896C10CC48032FB58 /* VolumeControl.swift in Sources */,
+				A0EBB35CA758B162AA7E3614 /* FrequencyPresetButtons.swift in Sources */,
+				4B12240B8524B1F3459B0390 /* FrequencyControls.swift in Sources */,
+				F1D7555590C9E09C32231217 /* PlaybackControls.swift in Sources */,
+				7BB99970DCC99ACA4767B00E /* TitleView.swift in Sources */,
+				5A1C3E7D2F0B4A6E9C8D1B20 /* ScreenshotDemo.swift in Sources */,
 				4F3564C82C04F2110015F5B5 /* AudioManager.swift in Sources */,
 				4F35649F2C04ED720015F5B5 /* ContentView.swift in Sources */,
 				4F35649D2C04ED720015F5B5 /* OneToneApp.swift in Sources */,
@@ -272,6 +349,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA73C009F7893EE00FD344FF /* OscilloscopeTests.swift in Sources */,
+				B29237D025CA867A2059046B /* LevelMeterTests.swift in Sources */,
+				A4791AB12D480A8316C2C8FF /* FrequencyKnobTests.swift in Sources */,
+				2714CAA32BB91936606E2F40 /* NeonGlowTests.swift in Sources */,
+				5A1C3E7D2F0B4A6E9C8D1B22 /* ScreenshotDemoTests.swift in Sources */,
+				407D703CBB65FE821F124499 /* AudioOutputTapTests.swift in Sources */,
+				D1BD1C8BB4E363C1197FE6A7 /* SampleRingBufferTests.swift in Sources */,
 				4F3564AF2C04ED740015F5B5 /* OneToneTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -353,12 +437,14 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.3;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -410,11 +496,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.3;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				SDKROOT = macosx;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -424,29 +512,39 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OneTone/OneTone.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = OneTone/OneTone.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"OneTone/Preview Content\"";
 				DEVELOPMENT_TEAM = XU74X3434S;
-				ENABLE_HARDENED_RUNTIME = YES;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphone*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ml.mrs1669.OneToneApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -455,29 +553,39 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OneTone/OneTone.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = OneTone/OneTone.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"OneTone/Preview Content\"";
 				DEVELOPMENT_TEAM = XU74X3434S;
-				ENABLE_HARDENED_RUNTIME = YES;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphone*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ml.mrs1669.OneToneApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
