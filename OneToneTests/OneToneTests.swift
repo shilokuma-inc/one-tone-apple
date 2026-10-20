@@ -6,6 +6,9 @@
 //
 
 import XCTest
+#if os(iOS)
+import UIKit
+#endif
 @testable import OneTone
 
 final class OneToneTests: XCTestCase {
@@ -558,17 +561,48 @@ final class OneToneTests: XCTestCase {
     }
 
     func testFaderMovesUpWhenDraggedUp() {
-        // 溝の長さだけ上へドラッグすると 0% から 100% になる
-        XCTAssertEqual(FaderMapping.volume(from: 0, dragHeight: -Double(FaderMapping.trackHeight)), 1, accuracy: 1e-9)
-        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -Double(FaderMapping.trackHeight) / 4), 0.75, accuracy: 1e-9)
-        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: Double(FaderMapping.trackHeight) / 4), 0.25, accuracy: 1e-9)
-        // 動かさなければ始点のまま（掴んだ位置へ飛ばない）
-        XCTAssertEqual(FaderMapping.volume(from: 0.3, dragHeight: 0), 0.3, accuracy: 1e-9)
+        // iPad・macOS の溝（160pt）でも iPhone の短い溝（100pt）でも、溝の長さだけ上へドラッグすると 0% から 100% になる
+        for trackHeight in [FaderMetrics.standard.trackHeight, FaderMetrics.compactPhone.trackHeight] {
+            let length = Double(trackHeight)
+            XCTAssertEqual(FaderMapping.volume(from: 0, dragHeight: -length, trackHeight: trackHeight), 1, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 1, dragHeight: length, trackHeight: trackHeight), 0, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -length / 4, trackHeight: trackHeight), 0.75, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: length / 4, trackHeight: trackHeight), 0.25, accuracy: 1e-9)
+            // 動かさなければ始点のまま（掴んだ位置へ飛ばない）
+            XCTAssertEqual(FaderMapping.volume(from: 0.3, dragHeight: 0, trackHeight: trackHeight), 0.3, accuracy: 1e-9)
+        }
+    }
+
+    func testFaderDragAmountDependsOnTrackHeight() {
+        // 同じ 40pt のドラッグでも、160pt の溝では 25%、100pt の溝では 40% 動く
+        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -40, trackHeight: 160), 0.75, accuracy: 1e-9)
+        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -40, trackHeight: 100), 0.9, accuracy: 1e-9)
+    }
+
+    func testFaderMetricsKeepStandardSizeAndShortenOnPhone() {
+        // iPad と macOS は Discussion #253 より前と同じ寸法（`.padding()` の既定の余白）のまま
+        XCTAssertEqual(FaderMetrics.standard, FaderMetrics(trackHeight: 160, labelSpacing: 8, verticalPadding: nil))
+        // iPhone は PLAY ボタン（120pt）に近づけるため溝を短くし、余白を詰める
+        XCTAssertEqual(FaderMetrics.compactPhone.trackHeight, 100)
+        XCTAssertLessThan(FaderMetrics.compactPhone.labelSpacing, FaderMetrics.standard.labelSpacing)
+        XCTAssertEqual(FaderMetrics.compactPhone.verticalPadding, 0)
+    }
+
+    @MainActor
+    func testFaderMetricsFollowDeviceIdiom() {
+        #if os(iOS)
+        let expected: FaderMetrics = UIDevice.current.userInterfaceIdiom == .phone ? .compactPhone : .standard
+        XCTAssertEqual(FaderMetrics.current, expected)
+        #else
+        XCTAssertEqual(FaderMetrics.current, .standard)
+        #endif
     }
 
     func testFaderStopsAtEnds() {
-        XCTAssertEqual(FaderMapping.volume(from: 0.9, dragHeight: -1000), 1)
-        XCTAssertEqual(FaderMapping.volume(from: 0.1, dragHeight: 1000), 0)
+        for trackHeight in [FaderMetrics.standard.trackHeight, FaderMetrics.compactPhone.trackHeight] {
+            XCTAssertEqual(FaderMapping.volume(from: 0.9, dragHeight: -1000, trackHeight: trackHeight), 1)
+            XCTAssertEqual(FaderMapping.volume(from: 0.1, dragHeight: 1000, trackHeight: trackHeight), 0)
+        }
         XCTAssertEqual(FaderMapping.clamped(1.2), 1)
         XCTAssertEqual(FaderMapping.clamped(-0.2), 0)
     }

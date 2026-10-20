@@ -15,11 +15,14 @@ struct VolumeControl: View {
     /// `@GestureState` なので、ドラッグがキャンセルされても nil に戻る
     @GestureState private var dragStartVolume: Double?
 
-    private let trackHeight: CGFloat = FaderMapping.trackHeight
     private let capSize = CGSize(width: 44, height: 18)
 
+    /// 溝の長さと余白。端末の種類で決まるので、毎回 `FaderMetrics.current` から読む
+    private var metrics: FaderMetrics { .current }
+    private var trackHeight: CGFloat { metrics.trackHeight }
+
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: metrics.labelSpacing) {
             Text(verbatim: "VOLUME")
                 .font(.caption.weight(.semibold))
                 .tracking(1.5)
@@ -29,7 +32,8 @@ struct VolumeControl: View {
                 .font(.system(.body, design: .rounded).weight(.semibold).monospacedDigit())
                 .foregroundStyle(Theme.textPrimary)
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, metrics.verticalPadding)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Volume")
         .accessibilityValue("\(FaderMapping.percent(for: volume))%")
@@ -74,16 +78,44 @@ struct VolumeControl: View {
                     if start == nil {
                         start = clampedVolume
                     }
-                    onChange(FaderMapping.volume(from: start ?? clampedVolume, dragHeight: value.translation.height))
+                    onChange(FaderMapping.volume(
+                        from: start ?? clampedVolume,
+                        dragHeight: value.translation.height,
+                        trackHeight: trackHeight
+                    ))
                 }
         )
     }
 }
 
+/// フェーダーの寸法。iPhone では OUTPUT パネルの PLAY ボタン（直径 120pt）の上下に空きが出ないよう、
+/// 溝を短くしてラベルとの間隔・上下の余白も詰める（Discussion #253 Q1）。iPad と macOS は既定の寸法のまま
+struct FaderMetrics: Equatable {
+    /// 溝の長さ（pt）。この長さのドラッグで 0〜100% を動かす
+    let trackHeight: CGFloat
+    /// VOLUME のラベル・溝・% 表示の間隔
+    let labelSpacing: CGFloat
+    /// 上下の余白。nil はシステムの既定（`.padding()` と同じ）
+    let verticalPadding: CGFloat?
+
+    /// iPad と macOS の寸法（Discussion #253 より前と同じ）
+    static let standard = FaderMetrics(trackHeight: 160, labelSpacing: 8, verticalPadding: nil)
+    /// iPhone の寸法
+    static let compactPhone = FaderMetrics(trackHeight: 100, labelSpacing: 4, verticalPadding: 0)
+
+    /// 今の端末の寸法。幅やサイズクラスではなく端末の種類で分ける（iPad の Split View の狭い幅は既定のまま）
+    @MainActor
+    static var current: FaderMetrics {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .phone ? .compactPhone : .standard
+        #else
+        .standard
+        #endif
+    }
+}
+
 /// フェーダーのドラッグ量と音量（0...1）の対応。UI から切り離してテストできるようにしている
 enum FaderMapping {
-    /// 溝の長さ（pt）。この長さのドラッグで 0〜100% を動かす
-    static let trackHeight: CGFloat = 160
     /// VoiceOver の 1 回の調整で動かす量
     static let accessibilityStep: Double = 0.05
 
@@ -91,8 +123,9 @@ enum FaderMapping {
         min(max(volume, 0), 1)
     }
 
-    /// ドラッグを始めた時点の音量と縦の移動量（下向きが正）から、新しい音量を求める。上へ動かすと上がる
-    static func volume(from start: Double, dragHeight: Double) -> Double {
+    /// ドラッグを始めた時点の音量と縦の移動量（下向きが正）から、新しい音量を求める。上へ動かすと上がり、
+    /// 溝の長さ（`trackHeight`）ぶん動かすと 0〜100% を動く
+    static func volume(from start: Double, dragHeight: Double, trackHeight: CGFloat) -> Double {
         clamped(start - dragHeight / Double(trackHeight))
     }
 
