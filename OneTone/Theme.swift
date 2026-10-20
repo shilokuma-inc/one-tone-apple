@@ -45,6 +45,17 @@ enum Theme {
     static let titleHueSwingPeriod: TimeInterval = 8
     /// 再生中にタイトルの色相を揺らす幅（度）。選んだ色の色相から -この値 〜 +この値 の間を行き来する（判断ログ #91）
     static let titleHueSwingAmplitude: Double = 30
+
+    /// ロゴ（アイコンのマーク＋「One Tone」）の寸法。文字の大きさを基準に、マークの高さと間隔を比で決める（判断ログ #265）
+    enum Logo {
+        /// メイン画面の大きいロゴの文字の大きさ（pt）の候補。大きい順に、幅に収まる最初のものを使う
+        /// （iPad・macOS は 56pt、iPhone は 48pt になる。56pt のロゴの幅は約 372pt）
+        static let largeTextSizes: [CGFloat] = [56, 48, 40, 32]
+        /// 文字の大きさに対するマークの高さ。マークを大文字より少し高くし、アイコンの図柄として見えるようにする
+        static let markHeightRatio: CGFloat = 0.95
+        /// 文字の大きさに対する、マークと文字の間隔
+        static let spacingRatio: CGFloat = 0.25
+    }
 }
 
 extension Color {

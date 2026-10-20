@@ -710,6 +710,23 @@ final class OneToneTests: XCTestCase {
         XCTAssertEqual(text.components(separatedBy: .newlines).first, LogoFont.copyright)
     }
 
+    func testLargeLogoSizesAreTriedFromLargest() {
+        // ViewThatFits は先に並べたものから試すので、大きい順に並べる
+        let sizes = Theme.Logo.largeTextSizes
+        XCTAssertEqual(sizes, sizes.sorted(by: >))
+        XCTAssertEqual(Set(sizes).count, sizes.count)
+        XCTAssertGreaterThan(sizes.last ?? 0, 0)
+    }
+
+    func testLogoMarkIsSlightlyTallerThanCapitals() throws {
+        // マークは大文字より高く、文字の大きさ（em）を超えない
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 100, nil)
+        let markHeight = 100 * Theme.Logo.markHeightRatio
+        XCTAssertGreaterThan(markHeight, CTFontGetCapHeight(font))
+        XCTAssertLessThanOrEqual(markHeight, 100)
+    }
+
     func testLicenseReflowKeepsTextAndParagraphs() throws {
         let text = try XCTUnwrap(LogoFont.licenseText)
         let reflowed = LicenseText.reflowed(text)
@@ -721,13 +738,16 @@ final class OneToneTests: XCTestCase {
         XCTAssertTrue(lines.contains("PREAMBLE"))
         XCTAssertTrue(lines.contains { $0.hasPrefix("1) Neither the Font Software") })
         XCTAssertTrue(lines.contains { $0.hasPrefix("SIL OPEN FONT LICENSE Version 1.1") })
+        // 全部大文字の段落（DISCLAIMER の本文）も 1 行につながる
+        XCTAssertTrue(lines.contains("DISCLAIMER"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("THE FONT SOFTWARE IS PROVIDED") && $0.hasSuffix("OTHER DEALINGS IN THE FONT SOFTWARE.") })
     }
 
     func testLicenseReflowJoinsOnlyInsideParagraphs() {
-        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend"
+        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS\nBODY\n\nEND"
         XCTAssertEqual(
             LicenseText.reflowed(text),
-            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend"
+            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS BODY\n\nEND"
         )
     }
 }

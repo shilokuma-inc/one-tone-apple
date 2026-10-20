@@ -42,6 +42,28 @@ final class AppIconDesignTests: XCTestCase {
         XCTAssertLessThan(bowlBottom, 1)
     }
 
+    func testMarkBoundsEncloseTheFigureTightly() {
+        let geometry = AppIconDesign.Geometry.self
+        let bounds = geometry.markBounds
+        // 半円の輪郭（線の太さ・端の丸を含む）と 5 本のバーを合わせた外接矩形と一致する
+        let bowl = geometry.bowlArc.copy(strokingWithWidth: geometry.lineWidth, lineCap: .round, lineJoin: .round, miterLimit: 10)
+        let figure = geometry.barRects.reduce(bowl.boundingBoxOfPath) { $0.union($1) }
+        XCTAssertEqual(bounds.minX, figure.minX, accuracy: 1e-6)
+        XCTAssertEqual(bounds.maxX, figure.maxX, accuracy: 1e-6)
+        XCTAssertEqual(bounds.minY, figure.minY, accuracy: 1e-6)
+        XCTAssertEqual(bounds.maxY, figure.maxY, accuracy: 1e-6)
+        // 左右対称で、アイコンの中に収まる
+        XCTAssertEqual(bounds.midX, 0.5, accuracy: 1e-9)
+        XCTAssertTrue(CGRect(x: 0, y: 0, width: 1, height: 1).contains(bounds))
+    }
+
+    func testLogoMarkKeepsTheFigureAspectRatio() {
+        let bounds = AppIconDesign.Geometry.markBounds
+        XCTAssertEqual(LogoMark.aspectRatio, bounds.width / bounds.height, accuracy: 1e-9)
+        // 半円の幅が中央のバーから半円の下端までより広い（横長の図柄）
+        XCTAssertGreaterThan(LogoMark.aspectRatio, 1)
+    }
+
     func testPreviewPaintsOnlyCenterBarWithAccent() {
         let palette = AppIconDesign.Palette(theme: nil)
         XCTAssertEqual(

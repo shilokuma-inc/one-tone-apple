@@ -32,6 +32,18 @@ final class OneToneUITests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct results.
     }
 
+    /// メイン画面のロゴ（マーク＋文字）が「One Tone」の 1 つの要素として読まれること（マークは読まない。見出しの trait は UI テストからは見えない）
+    func testLogoIsReadOnce() throws {
+        let app = XCUIApplication()
+        app.launchArguments.append("-skip-tutorial")
+        app.launch()
+
+        // 文字は iOS では label、macOS では value に入る
+        let logo = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR value == %@", "One Tone", "One Tone"))
+        XCTAssertTrue(logo.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(logo.count, 1)
+    }
+
     /// 設定画面に同梱の書体のライセンス表記（LICENSES）があり、ライセンスの全文を開けること。
     /// PR に載せる画像のため、パネルと全文のスクリーンショットを残す
     func testSettingsShowsFontLicense() throws {
