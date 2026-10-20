@@ -17,7 +17,9 @@ enum Theme {
     /// 部品を載せる面（パネル）
     static let surface = Color(hex: 0x16161F)
     /// 一段持ち上げた面（押せる部品）
-    static let surfaceRaised = Color(hex: 0x22222E)
+    static let surfaceRaised = Color(hex: surfaceRaisedHex)
+    /// `surfaceRaised` の 0xRRGGBB。レベルメーターの濃淡の計算とコントラスト比の確認に使う
+    static let surfaceRaisedHex: UInt32 = 0x22222E
 
     /// 本文・数値の文字（背景比 17.7:1）
     static let textPrimary = Color(hex: 0xF2F2F7)
