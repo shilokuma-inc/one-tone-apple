@@ -727,6 +727,32 @@ final class OneToneTests: XCTestCase {
         XCTAssertLessThanOrEqual(markHeight, 100)
     }
 
+    func testBarLogoAppearsWhenLargeLogoIsUnderTheBar() {
+        // 大きいロゴの下端がバーの下端に届いたら（隠れたら）出す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 120, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: 100, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: -300, barBottom: 100, wasShown: false))
+        // 見えるところまで戻ったら消す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 100 + Theme.Logo.barLogoHysteresis + 1, barBottom: 100, wasShown: true))
+    }
+
+    func testBarLogoDoesNotFlickerAroundTheEdge() {
+        // 境目の少し下（ゆとりの中）では今の状態を保つので、1pt ずつ行き来しても切り替わらない
+        let edge: CGFloat = 100
+        var shown = false
+        for bottom in [101, 102, 101, 103, 102] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertFalse(shown)
+        }
+        shown = BarLogoVisibility.isShown(largeLogoBottom: edge, barBottom: edge, wasShown: shown)
+        XCTAssertTrue(shown)
+        for bottom in [101, 103, 102, edge + Theme.Logo.barLogoHysteresis, 101] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertTrue(shown, "\(bottom)")
+        }
+        XCTAssertGreaterThan(Theme.Logo.barLogoHysteresis, 0)
+    }
+
     func testLicenseReflowKeepsTextAndParagraphs() throws {
         let text = try XCTUnwrap(LogoFont.licenseText)
         let reflowed = LicenseText.reflowed(text)
