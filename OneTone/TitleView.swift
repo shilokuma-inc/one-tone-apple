@@ -271,6 +271,41 @@ struct LogoMarkPhases {
     }
 }
 
+/// iOS 26 以上のバーの真ん中に出す小さいロゴ。大きいロゴがバーの下に隠れている間だけフェードで出す（Reduce Motion ではアニメーションなし）。
+/// 動きは付けない（再生中の演出は大きいロゴだけ）。色はテーマに追従する
+struct BarLogo: View {
+    /// 出しているか（`BarLogoVisibility.isShown`）
+    let isShown: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        LogoLockup(textSize: Theme.Logo.barTextSize)
+            .opacity(isShown ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeInOut(duration: Theme.Logo.barFadeDuration), value: isShown)
+            // 隠している間は読み上げない（大きいロゴが見えているので二重に読ませない）
+            .accessibilityHidden(!isShown)
+            .accessibilityIdentifier("barLogo")
+    }
+}
+
+/// バーの小さいロゴを出すかの判定。大きいロゴの下端がバーの下端より上（バーの下に隠れた）なら出し、
+/// バーの下端より `Theme.Logo.barLogoHysteresis` だけ下へ戻ったら消す。その間は今の状態を保つので、境目で行き来してもちらつかない
+enum BarLogoVisibility {
+    /// - Parameters:
+    ///   - largeLogoBottom: 大きいロゴの下端（画面の座標・pt）
+    ///   - barBottom: バーの下端（画面の座標・pt）
+    ///   - wasShown: 今出しているか
+    static func isShown(largeLogoBottom: CGFloat, barBottom: CGFloat, wasShown: Bool) -> Bool {
+        if largeLogoBottom <= barBottom {
+            return true
+        }
+        if largeLogoBottom > barBottom + Theme.Logo.barLogoHysteresis {
+            return false
+        }
+        return wasShown
+    }
+}
+
 /// ロゴの書体（Discussion #262 Q2）。アプリに同梱した OFL の書体を、Asset Catalog の Data Set から読んでプロセスに登録して使う。
 ///
 /// `UIAppFonts` / `ATSApplicationFontsPath`（Info.plist）を使わないのは、pbxproj と Info.plist を変えずに iOS と macOS で同じ方法で読むため。

@@ -55,6 +55,12 @@ enum Theme {
         static let markHeightRatio: CGFloat = 0.95
         /// 文字の大きさに対する、マークと文字の間隔
         static let spacingRatio: CGFloat = 0.25
+        /// iOS 26 以上のバーに出す小さいロゴの文字の大きさ（pt）。ロゴの高さは約 26pt（判断ログ #265）
+        static let barTextSize: CGFloat = 20
+        /// バーの小さいロゴを出す・消すフェードの秒数（Q4: 実装後に触って調整する値）
+        static let barFadeDuration: TimeInterval = 0.2
+        /// バーの小さいロゴを消す境目のゆとり（pt）。大きいロゴの下端がバーの下端よりこれだけ下へ戻るまで消さず、境目でちらつかないようにする
+        static let barLogoHysteresis: CGFloat = 8
     }
 
     /// 再生中のロゴのマークのバーの動き（判断ログ #265）。バーはアイコンの長さを上限に縮んで戻り、イコライザーのように伸び縮みする
