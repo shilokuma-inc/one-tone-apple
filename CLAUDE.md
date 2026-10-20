@@ -139,6 +139,9 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
   色は既定のアプリアイコンと同じく白い線に中央のバーだけテーマの差し色、文字はテーマの `titleGradient`
 - 大きさは文字の大きさで指定する（`LogoLockup(textSize:)`）。メイン画面は `Theme.Logo.largeTextSizes` を大きい順に `ViewThatFits` で試し、幅に収まる最大のものを使う（iPad・macOS は 56pt、iPhone は 48pt）
 - 読み上げは文字の「One Tone」だけ（マークは `accessibilityHidden`）。`TitleView` が見出しの trait を付ける
+- iOS 26 以上（iPhone・iPad）だけ、メイン画面を `NavigationStack` に入れてバーを付ける（`ContentView.barredScreen`）。左に「？」、右に歯車、真ん中に小さいロゴ（`BarLogo`。文字 `Theme.Logo.barTextSize`）。
+  小さいロゴは大きいロゴがバーの下に隠れたらフェードで出し、戻ったら消す（判定は `BarLogoVisibility`。フェードの秒数 `barFadeDuration` と境目のゆとり `barLogoHysteresis` は `Theme.Logo`）。
+  iOS 26 未満と macOS は今までどおり画面の角にボタンを重ね（`overlaidScreen`）、バーも小さいロゴも出さない。分岐は `ContentView.mainScreen` の 1 か所
 - 再生中は、マークの 5 本のバーが鳴っている音に合わせて伸び縮みする（`LogoMarkMotion`。長さは位相と音の値から求める純粋な関数で、Unit テストは `NeonGlowTests`）。
   音量 → 縮む深さ、周波数 → 速さ（対数）、波形 → 動きの形、和音 → 構成音の比でバーごとの速さを変える。文字の色相の揺れと発光は今までどおり。
   速さ・深さの値は `Theme.LogoMotion`。どのバーも 1 秒に 3 往復を超えない（`maxBarRate`。点滅に見えないため）。停止中・Reduce Motion・撮影モードではアイコンの形で止まる
