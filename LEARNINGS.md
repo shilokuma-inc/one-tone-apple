@@ -52,6 +52,8 @@
 
 ## UI テスト
 
+- `ViewThatFits` と `TimelineView` の中の `HStack` に `.accessibilityElement(children: .ignore)` と `.accessibilityLabel` を付けたら、iOS ではまとめた要素と中の `Text` の両方が同じラベルの要素として出た（読み上げが 2 回になる）。マークのような飾りに `.accessibilityHidden(true)` を付け、要素を `Text` だけにすると 1 つになる。UI テストで同じラベルの要素の数を数えて確かめる（`testLogoIsReadOnce`）。見出しの trait は XCUITest からは見えない（`ElementType` に header が無い）（2026-10-20）
+
 - macOS の `XCUIApplication().screenshot()` はアプリのウィンドウではなく画面全体（ほかのアプリのウィンドウも）を写す。PR に載せる画像は `app.windows.containing(.any, identifier: …).firstMatch.screenshot()` でウィンドウだけを撮る（2026-10-20）
 - macOS の UI テストでは `Text` の中身が `label` ではなく `value` に入る（iOS は `label`）。文言を確かめるときは両方を見る。Simulator の言語が日本語だとボタンのラベルも訳されるので、ボタンは `accessibilityIdentifier` か SF Symbols の名前（`gearshape` など。システムが識別子に入れる）で探す（2026-10-20）
 

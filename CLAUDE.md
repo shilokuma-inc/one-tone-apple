@@ -119,13 +119,15 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 
 ## ロゴ
 
-メイン画面の「One Tone」のロゴの書体は、同梱した **Audiowide**（SIL Open Font License 1.1。Reserved Font Name「Audiowide」。Discussion #262）。
+メイン画面の上のロゴは、アプリアイコンのマーク（半円＋5 本のバー）と「One Tone」の文字を横に並べたもの（Discussion #262）。
+文字の書体は、同梱した **Audiowide**（SIL Open Font License 1.1。Reserved Font Name「Audiowide」）。
 
 | もの | 場所 |
 | --- | --- |
 | フォントファイル（Google Fonts の `ofl/audiowide/` のものを改変せずに置く） | `OneTone/Assets.xcassets/LogoFont.dataset/` |
 | ライセンスの全文（`OFL.txt` のまま） | `OneTone/Assets.xcassets/LogoFontLicense.dataset/` |
-| 登録と名前・著作権表示の定数（`LogoFont`） | `OneTone/TitleView.swift` |
+| ロゴ（`LogoLockup`）・マーク（`LogoMark`）・メイン画面の大きいロゴ（`TitleView`）・書体の登録と定数（`LogoFont`） | `OneTone/TitleView.swift` |
+| ロゴの寸法（文字の大きさの候補・マークの高さと間隔の比。`Theme.Logo`） | `OneTone/Theme.swift` |
 | ライセンス表記（設定画面の `LICENSES` のパネルと全文のシート） | `OneTone/SettingsView.swift`（`LogoFontLicenseSection`） |
 
 - フォントは Info.plist の `UIAppFonts` / `ATSApplicationFontsPath` を使わず、Asset Catalog の Data Set から読んで Core Text でプロセスに登録する（pbxproj と Info.plist を変えないため）。
@@ -133,6 +135,10 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 - 使うときは `LogoFont.font(size:)`。最初に呼ばれたときに 1 回だけ登録し、登録できなければシステムの太字になる。`OneToneApp.init` でも先に登録している
 - 書体を差し替えるときは、2 つの Data Set の中身と `LogoFont` の `postScriptName` / `familyName` / `copyright` を差し替える（コードの他の場所は変えなくてよい）。
   OFL の書体だけを使い、改変（サブセット化を含む）しない（Reserved Font Name のある書体は、改変すると名前を変える義務がある）。`OneToneTests` の `testLogoFont…` が Data Set・登録・全文を確かめる
+- マークは `AppIconDesign.Geometry` の図柄を外接矩形（`markBounds`）で切り出して描き、ロゴ用の寸法は持たない（アイコンの見た目を変えると、ロゴのマークも一緒に変わる）。
+  色は既定のアプリアイコンと同じく白い線に中央のバーだけテーマの差し色、文字はテーマの `titleGradient`
+- 大きさは文字の大きさで指定する（`LogoLockup(textSize:)`）。メイン画面は `Theme.Logo.largeTextSizes` を大きい順に `ViewThatFits` で試し、幅に収まる最大のものを使う（iPad・macOS は 56pt、iPhone は 48pt）
+- 読み上げは文字の「One Tone」だけ（マークは `accessibilityHidden`）。`TitleView` が見出しの trait を付ける
 - 書体名・著作権表示・ライセンスの全文・パネル名 `LICENSES` は訳さない（`Text(verbatim:)`）。全文は表示のときだけ段落の中の改行をつなぐ（`LicenseText.reflowed`。データは原文のまま）
 
 ## ブランチ運用・規約
