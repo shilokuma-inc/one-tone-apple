@@ -31,6 +31,8 @@ struct ContentView: View {
     private let settingsStore: ToneSettingsStore?
     #if os(iOS)
     @State private var isShowingSettings = false
+    /// iOS 26 以上のバーに小さいロゴを出しているか（大きいロゴがバーの下に隠れているか）
+    @State private var showsBarLogo = false
     #endif
     /// チュートリアルを閉じたことがあるか。Skip / 完了 / 閉じる のどれでも立てる
     @AppStorage(Tutorial.hasSeenKey) private var hasSeenTutorial = false
@@ -74,54 +76,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        // 幅で並べ方だけを変え、狭い画面では縦にスクロールして部品が切れないようにする
-        GeometryReader { proxy in
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    VStack(spacing: 16) {
-                        TitleView(isPlaying: audioManager.isPlaying, sound: logoSound)
-                            .padding(.top)
-                    
-                        OscilloscopeView(isPlaying: audioManager.isPlaying, readSamples: audioManager.latestOutputSamples)
-                            .frame(maxWidth: DeckLayout.panelMaxWidth * 2)
-                    
-                        if DeckLayout.isSideBySide(width: proxy.size.width) {
-                            HStack(alignment: .top, spacing: 16) {
-                                frequencyPanel
-                                outputPanel
-                            }
-                        } else {
-                            VStack(spacing: 16) {
-                                outputPanel
-                                frequencyPanel
-                                    .id(Section.frequency)
-                            }
-                        }
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                }
-                #if os(iOS)
-                // 数値入力のキーボードをスクロールで閉じられるようにする（確定は従来どおり onSubmit）
-                .scrollDismissesKeyboard(.interactively)
-                #endif
-                .onAppear {
-                    // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
-                    if let initialScrollTarget {
-                        scrollProxy.scrollTo(initialScrollTarget, anchor: .top)
-                    }
-                }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            TutorialButton(action: openTutorial)
-        }
-        // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
-        .overlay(alignment: .topTrailing) {
-            if !isScreenshotDemo {
-                settingsButton
-            }
-        }
+        mainScreen
         #if os(macOS)
         .frame(minWidth: DeckLayout.minimumWindowSize.width, minHeight: DeckLayout.minimumWindowSize.height)
         #endif
@@ -178,6 +133,119 @@ struct ContentView: View {
             }
         }
     }
+
+    /// ロゴ・波形・パネルを並べたスクロール。iOS 26 以上のバーと、それより前・macOS の角のボタンの両方で使う
+    private var deck: some View {
+        // 幅で並べ方だけを変え、狭い画面では縦にスクロールして部品が切れないようにする
+        GeometryReader { proxy in
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(spacing: 16) {
+                        TitleView(isPlaying: audioManager.isPlaying, sound: logoSound)
+                            #if os(iOS)
+                            // 大きいロゴがバーの下に隠れたかを見て、バーの小さいロゴを出し入れする（iOS 26 以上のバーで使う）
+                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
+                                let barBottom = proxy.frame(in: .global).minY + proxy.safeAreaInsets.top
+                                showsBarLogo = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: barBottom, wasShown: showsBarLogo)
+                            }
+                            #endif
+                            .padding(.top)
+                    
+                        OscilloscopeView(isPlaying: audioManager.isPlaying, readSamples: audioManager.latestOutputSamples)
+                            .frame(maxWidth: DeckLayout.panelMaxWidth * 2)
+                    
+                        if DeckLayout.isSideBySide(width: proxy.size.width) {
+                            HStack(alignment: .top, spacing: 16) {
+                                frequencyPanel
+                                outputPanel
+                            }
+                        } else {
+                            VStack(spacing: 16) {
+                                outputPanel
+                                frequencyPanel
+                                    .id(Section.frequency)
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                }
+                #if os(iOS)
+                // 数値入力のキーボードをスクロールで閉じられるようにする（確定は従来どおり onSubmit）
+                .scrollDismissesKeyboard(.interactively)
+                #endif
+                .onAppear {
+                    // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
+                    if let initialScrollTarget {
+                        scrollProxy.scrollTo(initialScrollTarget, anchor: .top)
+                    }
+                }
+            }
+        }
+    }
+
+    /// iOS 26 以上はバー（`NavigationStack` のツールバー）に「？」・歯車・小さいロゴを置き、それより前の iOS と macOS は画面の角にボタンを重ねる（Discussion #262 Q5〜Q7）
+    @ViewBuilder
+    private var mainScreen: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            barredScreen
+        } else {
+            overlaidScreen
+        }
+        #else
+        overlaidScreen
+        #endif
+    }
+
+    /// 「？」と歯車を画面の角に重ねる（iOS 26 より前と macOS。バーは出さない）
+    private var overlaidScreen: some View {
+        deck
+            .overlay(alignment: .topLeading) {
+                TutorialButton(action: openTutorial)
+            }
+            // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
+            .overlay(alignment: .topTrailing) {
+                if !isScreenshotDemo {
+                    settingsButton
+                }
+            }
+    }
+
+    #if os(iOS)
+    /// iOS 26 以上のバー。左に「？」、右に歯車、真ん中に大きいロゴが隠れたときだけ小さいロゴを出す。
+    /// バーとボタンの見た目（Liquid Glass・スクロールの端の効果）はシステムに任せる
+    @available(iOS 26.0, *)
+    private var barredScreen: some View {
+        NavigationStack {
+            deck
+                .background(Theme.background.ignoresSafeArea())
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: openTutorial) {
+                            Image(systemName: "questionmark.circle")
+                        }
+                        .accessibilityLabel("Show Tutorial")
+                    }
+                    ToolbarItem(placement: .principal) {
+                        BarLogo(isShown: showsBarLogo)
+                    }
+                    // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
+                    if !isScreenshotDemo {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                isShowingSettings = true
+                            } label: {
+                                Image(systemName: "gearshape")
+                            }
+                            .accessibilityLabel("Settings")
+                        }
+                    }
+                }
+        }
+    }
+    #endif
 
     /// 起動時に音量を下げたことを 1 度だけ知らせる
     private func presentPendingVolumeCapNotice() {
