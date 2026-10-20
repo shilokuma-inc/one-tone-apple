@@ -1,0 +1,129 @@
+{
+  "images" : [
+    {
+      "filename" : "ios.png",
+      "idiom" : "universal"
+    },
+    {
+      "filename" : "mac.png",
+      "idiom" : "mac"
+    },
+    {
+      "filename" : "ios-ja.png",
+      "idiom" : "universal",
+      "locale" : "ja"
+    },
+    {
+      "filename" : "mac-ja.png",
+      "idiom" : "mac",
+      "locale" : "ja"
+    },
+    {
+      "filename" : "ios-zh-Hans.png",
+      "idiom" : "universal",
+      "locale" : "zh-Hans"
+    },
+    {
+      "filename" : "mac-zh-Hans.png",
+      "idiom" : "mac",
+      "locale" : "zh-Hans"
+    },
+    {
+      "filename" : "ios-zh-Hant.png",
+      "idiom" : "universal",
+      "locale" : "zh-Hant"
+    },
+    {
+      "filename" : "mac-zh-Hant.png",
+      "idiom" : "mac",
+      "locale" : "zh-Hant"
+    },
+    {
+      "filename" : "ios-ko.png",
+      "idiom" : "universal",
+      "locale" : "ko"
+    },
+    {
+      "filename" : "mac-ko.png",
+      "idiom" : "mac",
+      "locale" : "ko"
+    },
+    {
+      "filename" : "ios-es.png",
+      "idiom" : "universal",
+      "locale" : "es"
+    },
+    {
+      "filename" : "mac-es.png",
+      "idiom" : "mac",
+      "locale" : "es"
+    },
+    {
+      "filename" : "ios-fr.png",
+      "idiom" : "universal",
+      "locale" : "fr"
+    },
+    {
+      "filename" : "mac-fr.png",
+      "idiom" : "mac",
+      "locale" : "fr"
+    },
+    {
+      "filename" : "ios-de.png",
+      "idiom" : "universal",
+      "locale" : "de"
+    },
+    {
+      "filename" : "mac-de.png",
+      "idiom" : "mac",
+      "locale" : "de"
+    },
+    {
+      "filename" : "ios-it.png",
+      "idiom" : "universal",
+      "locale" : "it"
+    },
+    {
+      "filename" : "mac-it.png",
+      "idiom" : "mac",
+      "locale" : "it"
+    },
+    {
+      "filename" : "ios-pt-BR.png",
+      "idiom" : "universal",
+      "locale" : "pt-BR"
+    },
+    {
+      "filename" : "mac-pt-BR.png",
+      "idiom" : "mac",
+      "locale" : "pt-BR"
+    },
+    {
+      "filename" : "ios-ru.png",
+      "idiom" : "universal",
+      "locale" : "ru"
+    },
+    {
+      "filename" : "mac-ru.png",
+      "idiom" : "mac",
+      "locale" : "ru"
+    },
+    {
+      "filename" : "ios-id.png",
+      "idiom" : "universal",
+      "locale" : "id"
+    },
+    {
+      "filename" : "mac-id.png",
+      "idiom" : "mac",
+      "locale" : "id"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
+  "properties" : {
+    "localizable" : true
+  }
+}
