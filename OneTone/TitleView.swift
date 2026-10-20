@@ -42,7 +42,9 @@ struct TitleView: View {
                         barScales: LogoMarkMotion.barScales(
                             phases: phases.phases(at: elapsed),
                             sound: sound,
-                            isAnimating: isAnimating
+                            // 再生し直した直後は、時計を動かして位相を 0 に戻す（`.task(id:)`）より先に描かれることがある。
+                            // それまでは止めた時点の位相が残っているので、時計が動き出すまではアイコンの形にしておく
+                            isAnimating: isAnimating && clock.startedAt != nil
                         ),
                         hueDegrees: Self.hueDegrees(at: elapsed)
                     )
