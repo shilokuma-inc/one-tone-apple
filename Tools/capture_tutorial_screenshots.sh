@@ -7,6 +7,7 @@ set -euo pipefail
 #   Tools/capture_tutorial_screenshots.sh                # 全言語、macOS と iOS の両方
 #   Tools/capture_tutorial_screenshots.sh mac            # 全言語、macOS だけ
 #   Tools/capture_tutorial_screenshots.sh ios ja,de      # ja と de だけ、iOS だけ
+#   PAGES="welcome playback" Tools/capture_tutorial_screenshots.sh ios   # 2 ページだけ、iOS だけ
 #
 # 言語は Localization/supported-languages.json の languages（撮影時の言語・地域は appStore の testLanguage / testRegion）。
 # 撮影は App Store 用と同じ撮影モード（OneTone/ScreenshotDemo.swift）と撮影スクリプト
@@ -25,7 +26,8 @@ LANGUAGES="${2:-}"
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PAGES="welcome playback frequency volume waveform note chord"
+# 撮るページ。一部のページだけ撮り直すときは環境変数 PAGES で上書きする（例: PAGES="playback volume"）
+PAGES="${PAGES:-welcome playback frequency volume waveform note chord}"
 ASSETS_DIR="OneTone/Assets.xcassets/Tutorial"
 # 撮った画面を一時的に置く場所（リポジトリの外）
 WORK_DIR="${WORK_DIR:-${TMPDIR:-/tmp}/OneToneTutorialScreenshots}"
