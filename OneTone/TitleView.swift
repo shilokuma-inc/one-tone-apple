@@ -136,11 +136,14 @@ enum LogoFont {
         return registered && isAvailable(postScriptName: postScriptName)
     }
 
-    /// フォントのデータをキャッシュのディレクトリに書き出す。同じ中身のファイルがあれば書き直さない
+    /// フォントのデータをキャッシュのディレクトリに書き出す。同じ中身のファイルがあれば書き直さない。
+    /// App Sandbox を外した撮影用ビルドではユーザー共通の `~/Library/Caches` になるので、バンドル ID の下に置く
     private static func writeFontFile(_ data: Data) -> URL? {
         let fileManager = FileManager.default
         guard let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
-        let directory = caches.appendingPathComponent(dataAssetName, isDirectory: true)
+        let directory = caches
+            .appendingPathComponent(Bundle.main.bundleIdentifier ?? "OneTone", isDirectory: true)
+            .appendingPathComponent(dataAssetName, isDirectory: true)
         let url = directory.appendingPathComponent("\(postScriptName).ttf")
         if fileManager.contents(atPath: url.path) == data {
             return url
