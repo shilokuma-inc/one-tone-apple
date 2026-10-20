@@ -79,7 +79,7 @@ struct ContentView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     VStack(spacing: 16) {
-                        TitleView(isPlaying: audioManager.isPlaying)
+                        TitleView(isPlaying: audioManager.isPlaying, sound: logoSound)
                             .padding(.top)
                     
                         OscilloscopeView(isPlaying: audioManager.isPlaying, readSamples: audioManager.latestOutputSamples)
@@ -333,6 +333,11 @@ struct ContentView: View {
         chord = newChord
         audioManager.updateFrequencies(ChordInput.frequencies(of: newChord))
         settingsStore?.save(chord: newChord)
+    }
+
+    /// ロゴのマークを動かす音の値（鳴らしているものと同じ周波数・音量・波形）
+    private var logoSound: LogoSound {
+        LogoSound(frequencies: currentSettings.frequencies(for: frequencyMode), volume: volume, waveform: waveform)
     }
 
     /// 今の画面の設定（保存する値と同じ組み合わせ）

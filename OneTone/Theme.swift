@@ -56,6 +56,21 @@ enum Theme {
         /// 文字の大きさに対する、マークと文字の間隔
         static let spacingRatio: CGFloat = 0.25
     }
+
+    /// 再生中のロゴのマークのバーの動き（判断ログ #265）。バーはアイコンの長さを上限に縮んで戻り、イコライザーのように伸び縮みする
+    enum LogoMotion {
+        /// 音量 100% のときにバーが縮む深さ（0...1）。バーの長さはアイコンの長さ × (1 - 深さ × 音量) 〜 アイコンの長さの間を行き来する
+        static let maxDepth: Double = 0.6
+        /// 動きの基本の速さ（往復 / 秒）。鳴っている音（和音は根音）の周波数が 20Hz で `minRate`、20kHz で `maxRate`（対数で比例）
+        static let minRate: Double = 0.5
+        static let maxRate: Double = 1.2
+        /// バーごとの速さの倍率（左から）。そろって動かず、ばらけて見えるようにする
+        static let barRateFactors: [Double] = [0.83, 1.17, 1.0, 1.29, 0.71]
+        /// 和音のときに構成音が 1 オクターブ上のバーを、根音のバーより何倍速く動かすか（構成音の比を対数で縮める）
+        static let chordRateSpread: Double = 0.5
+        /// 1 本のバーの往復の速さの上限（往復 / 秒）。点滅に見えないよう 1 秒に 3 回を下回らせる（テストで確かめる）
+        static let maxBarRate: Double = 2.5
+    }
 }
 
 extension Color {
