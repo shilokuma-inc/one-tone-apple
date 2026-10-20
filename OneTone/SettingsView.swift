@@ -26,6 +26,10 @@ struct SettingsView: View {
                     AppIconPicker()
                 }
                 #endif
+                // 同梱した書体のライセンス表記（OFL の条件）。名前・著作権表示・全文は訳さない
+                DeckPanel(title: "LICENSES") {
+                    LogoFontLicenseSection()
+                }
                 // RESET は常に最後に置く（Discussion #169）。設定項目を足すときもこれより上に足す
                 DeckPanel(title: "RESET") {
                     ToneSettingsResetButton()
@@ -103,6 +107,108 @@ struct ToneSettingsResetButton: View {
         } message: {
             Text(ToneSettingsResetConfirmation.message)
         }
+    }
+}
+
+/// ロゴの書体のライセンス表記。書体名（その書体で表示）・著作権表示・ライセンス名を並べ、ボタンで全文をシートに出す。
+/// macOS の設定ウィンドウは 420×580 の固定なので、全文はパネルに広げずシートにする
+struct LogoFontLicenseSection: View {
+    @State private var isShowingFullText = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: LogoFont.familyName)
+                .font(LogoFont.font(size: 20))
+                .foregroundStyle(Theme.textPrimary)
+            Text(verbatim: LogoFont.copyright)
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: LogoFont.licenseName)
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.textSecondary)
+            Button {
+                isShowingFullText = true
+            } label: {
+                Label("View Full License", systemImage: "doc.text")
+                    .font(.system(.callout, design: .rounded).weight(.medium))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WaveformButtonStyle(isSelected: false))
+            .accessibilityIdentifier("viewFullLicenseButton")
+        }
+        .padding(4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .sheet(isPresented: $isShowingFullText) {
+            LicenseTextView(title: LogoFont.licenseName, text: LicenseText.reflowed(LogoFont.licenseText ?? ""))
+        }
+    }
+}
+
+/// ライセンスの全文の表示用の整形
+enum LicenseText {
+    /// 72 桁前後で折り返してある原文（`OFL.txt`）の、段落の中の改行を空白にする。狭い画面で折り返しが二重になり、行が細切れになるのを防ぐ。
+    /// 空行・区切りの線（`---`）・見出し（小文字を含まない行）・番号付きの項目（`1)` など）の前後は改行のまま残す。文字は足し引きしない
+    static func reflowed(_ text: String) -> String {
+        let lines = text.components(separatedBy: "\n")
+        var result = ""
+        for (index, line) in lines.enumerated() {
+            result += line
+            guard index + 1 < lines.count else { break }
+            result += joinsWithNext(line, lines[index + 1]) ? " " : "\n"
+        }
+        return result
+    }
+
+    private static func joinsWithNext(_ line: String, _ next: String) -> Bool {
+        let startsItem = next.range(of: #"^\d+\)"#, options: .regularExpression) != nil
+        return !isBreak(line) && !isBreak(next) && !startsItem
+    }
+
+    /// 前後で改行を残す行（空行・区切りの線・見出し）
+    private static func isBreak(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || trimmed.hasPrefix("-") || !trimmed.contains(where: \.isLowercase)
+    }
+}
+
+/// ライセンスの全文のシート。原文のまま（訳さない）等幅で出し、選んでコピーできるようにする
+private struct LicenseTextView: View {
+    let title: String
+    let text: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(verbatim: title)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+            Divider()
+                .overlay(Theme.surfaceRaised)
+            ScrollView {
+                Text(verbatim: text)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(Theme.textSecondary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .accessibilityIdentifier("licenseFullText")
+            }
+        }
+        #if os(macOS)
+        .frame(width: 400, height: 520)
+        #endif
+        .themedScreen()
     }
 }
 
@@ -303,6 +409,15 @@ private struct AppIconLabel: View {
     .frame(width: 400)
     .themedScreen()
     .environment(\.themeColor, .pink)
+}
+
+#Preview("LICENSES") {
+    DeckPanel(title: "LICENSES") {
+        LogoFontLicenseSection()
+    }
+    .padding()
+    .frame(width: 400)
+    .themedScreen()
 }
 
 #Preview("選択の見た目") {

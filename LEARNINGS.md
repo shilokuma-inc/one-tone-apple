@@ -45,6 +45,20 @@
 - iPhone の縦積みでは OUTPUT パネルが上、FREQUENCY パネルが下にあるので、音名・和音モードのように FREQUENCY パネルを見せたい画面は `ScreenshotDemo.Scene.scrollTarget` で `.frequency` まで送らないと写らない（iPad 13 inch / Mac は横並びなので送らなくても写る）（2026-10-18）
 - チュートリアルのページを足しても、`Tools/capture_tutorial_screenshots.sh` で撮るまで画像セットは無い。`Image("Tutorial-…")` は無い名前でも落ちずに空になるので、`UIImage(named:)` / `NSImage(named:)` で有無を見て代わりの表示を出す。撮影スクリプトの `PAGES` に足せば画像セット（Contents.json も）が作られ、コードを変えずに画像へ替わる（2026-10-18）
 
+## ロゴの書体（LogoFont）
+
+- `CTFontManagerCreateFontDescriptorsFromData` で作った descriptor は URL を持たないので、`CTFontManagerRegisterFontDescriptors` に渡すと code 303 で登録されず、`CTFontCreateWithName` が Helvetica になる（エラーは完了ハンドラにしか来ない）。`CTFontManagerRegisterGraphicsFont` は iOS 18 / macOS 15 で非推奨。データをファイルに書き出して `CTFontManagerRegisterFontsForURL(…, .process, …)` で登録すると使える（2026-10-20）
+- 登録できたかは `CTFontCopyPostScriptName(CTFontCreateWithName(名前, …))` が名前と一致するかで見る。一致しない名前を渡すと落ちずに代わりの書体が返るので、目で見ないと気づかない（2026-10-20）
+
+## UI テスト
+
+- macOS の `XCUIApplication().screenshot()` はアプリのウィンドウではなく画面全体（ほかのアプリのウィンドウも）を写す。PR に載せる画像は `app.windows.containing(.any, identifier: …).firstMatch.screenshot()` でウィンドウだけを撮る（2026-10-20）
+- macOS の UI テストでは `Text` の中身が `label` ではなく `value` に入る（iOS は `label`）。文言を確かめるときは両方を見る。Simulator の言語が日本語だとボタンのラベルも訳されるので、ボタンは `accessibilityIdentifier` か SF Symbols の名前（`gearshape` など。システムが識別子に入れる）で探す（2026-10-20）
+
+## ローカライズ（sync の差分）
+
+- `python3 Tools/sync_string_catalogs.py` を流すと、足したキーのほかに既存のキーの言語の並びまで書き換わり、catalog 全体が数百行の差分になることがある（`format_string_catalogs.py` は言語の並びを元に戻さない）。足したキーだけを元の catalog（`git show <base>:OneTone/Localizable.xcstrings`）に入れて format → verify すると、差分がそのキーだけになる（2026-10-20）
+
 ## GitHub Actions
 
 - `workflow_dispatch` だけのワークフローは、既定ブランチに無いと `gh workflow run` / REST API から起動できない（404）。一度でも実行されれば登録されて `--ref <ブランチ>` で起動できるので、新規に足すときは一時的に PR ブランチへの `push` トリガーを付けて 1 回動かし、登録後に外す（2026-10-05）

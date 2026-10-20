@@ -117,6 +117,24 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 色はコントラストのテスト（`allCases` を固定の基準で判定する）が通るものを選ぶ（基準は緩めない。テストは CI では流れないので手元で流す）。
 テーマ色の数は Discussion #80 で 6〜8 色と決めているので、9 色目を足すなら先に仕様を決め直す。
 
+## ロゴ
+
+メイン画面の「One Tone」のロゴの書体は、同梱した **Audiowide**（SIL Open Font License 1.1。Reserved Font Name「Audiowide」。Discussion #262）。
+
+| もの | 場所 |
+| --- | --- |
+| フォントファイル（Google Fonts の `ofl/audiowide/` のものを改変せずに置く） | `OneTone/Assets.xcassets/LogoFont.dataset/` |
+| ライセンスの全文（`OFL.txt` のまま） | `OneTone/Assets.xcassets/LogoFontLicense.dataset/` |
+| 登録と名前・著作権表示の定数（`LogoFont`） | `OneTone/TitleView.swift` |
+| ライセンス表記（設定画面の `LICENSES` のパネルと全文のシート） | `OneTone/SettingsView.swift`（`LogoFontLicenseSection`） |
+
+- フォントは Info.plist の `UIAppFonts` / `ATSApplicationFontsPath` を使わず、Asset Catalog の Data Set から読んで Core Text でプロセスに登録する（pbxproj と Info.plist を変えないため）。
+  データから作った descriptor は登録できないので、キャッシュのディレクトリに書き出したファイルを `CTFontManagerRegisterFontsForURL` で登録する（`LEARNINGS.md` の「ロゴの書体」）
+- 使うときは `LogoFont.font(size:)`。最初に呼ばれたときに 1 回だけ登録し、登録できなければシステムの太字になる。`OneToneApp.init` でも先に登録している
+- 書体を差し替えるときは、2 つの Data Set の中身と `LogoFont` の `postScriptName` / `familyName` / `copyright` を差し替える（コードの他の場所は変えなくてよい）。
+  OFL の書体だけを使い、改変（サブセット化を含む）しない（Reserved Font Name のある書体は、改変すると名前を変える義務がある）。`OneToneTests` の `testLogoFont…` が Data Set・登録・全文を確かめる
+- 書体名・著作権表示・ライセンスの全文・パネル名 `LICENSES` は訳さない（`Text(verbatim:)`）。全文は表示のときだけ段落の中の改行をつなぐ（`LicenseText.reflowed`。データは原文のまま）
+
 ## ブランチ運用・規約
 
 - 通常のフィーチャーブランチは `develop` 起点で切る。ralph-loop の作業ブランチは `epic/**` 起点で切り、PR もその epic 宛てに出す
