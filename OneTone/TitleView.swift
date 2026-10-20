@@ -23,8 +23,8 @@ struct TitleView: View {
     @Environment(\.freezesAnimations) private var freezesAnimations
     /// 動いていた時間だけを数える時計。止めている間の時間を含めず、再開したとき色やバーが飛ばないようにする
     @State private var clock = PausableClock()
-    /// バーの動きの位相。周波数を変えて速さが変わっても、長さが飛ばないように積み上げる
-    @State private var phase = PhaseAccumulator()
+    /// バーごとの動きの位相。音を変えて速さが変わっても長さが飛ばないように積み上げ、動き始めるたびに 0（アイコンの形）から始める
+    @State private var phases = LogoMarkPhases()
 
     /// 動かすか。再生中かつ Reduce Motion がオフで、撮影モードでもないときだけ動かす
     private var isAnimating: Bool {
@@ -40,7 +40,7 @@ struct TitleView: View {
                     LogoLockup(
                         textSize: size,
                         barScales: LogoMarkMotion.barScales(
-                            phase: phase.phase(at: elapsed),
+                            phases: phases.phases(at: elapsed),
                             sound: sound,
                             isAnimating: isAnimating
                         ),
@@ -53,15 +53,18 @@ struct TitleView: View {
         // 表示時と、動かす／止めるが切り替わるたびに時計を動かす・止める
         // （2 引数の onChange は macOS 14 からなので、表示時にも呼ばれる task(id:) を使う）
         .task(id: isAnimating) {
+            let now = Date()
             if isAnimating {
-                clock.start(at: Date())
+                clock.start(at: now)
+                // 止めている間はアイコンの形で表示しているので、バーは 0 から動かし始める（途中の長さへ飛ばない）。色相は止めた角度から続ける
+                phases.restart(at: clock.elapsed(at: now))
             } else {
-                clock.stop(at: Date())
+                clock.stop(at: now)
             }
         }
-        // 周波数が変わったら、その時点の位相から新しい速さで進める
-        .task(id: LogoMarkMotion.baseRate(for: sound.frequencies)) {
-            phase.setRate(LogoMarkMotion.baseRate(for: sound.frequencies), at: clock.elapsed(at: Date()))
+        // 音（周波数・和音の構成音）が変わったら、バーごとにその時点の位相から新しい速さで進める
+        .task(id: LogoMarkMotion.barRates(for: sound.frequencies)) {
+            phases.setRates(LogoMarkMotion.barRates(for: sound.frequencies), at: clock.elapsed(at: Date()))
         }
         // マークは読み上げから外してあるので、読まれるのは文字の「One Tone」だけ。それを見出しにする
         .accessibilityAddTraits(.isHeader)
@@ -191,6 +194,12 @@ enum LogoMarkMotion {
         }
     }
 
+    /// バー（左から）の速さ（往復 / 秒）。基本の速さにバーごとの倍率を掛け、`Theme.LogoMotion.maxBarRate` で抑える
+    static func barRates(for frequencies: ToneFrequencies) -> [Double] {
+        let base = baseRate(for: frequencies)
+        return barRateFactors(for: frequencies).map { min(base * $0, Theme.LogoMotion.maxBarRate) }
+    }
+
     /// 縮む深さ（0...maxDepth）
     static func depth(volume: Double) -> Double {
         Theme.LogoMotion.maxDepth * min(max(volume, 0), 1)
@@ -215,13 +224,14 @@ enum LogoMarkMotion {
         }
     }
 
-    /// 5 本のバー（左から）の、アイコンに対する長さの比（`1 - 深さ`...1）。`phase` は基本の速さで積み上げた位相（往復の回数）。
+    /// 5 本のバー（左から）の、アイコンに対する長さの比（`1 - 深さ`...1）。`phases` はバーごとに積み上げた位相（往復の回数。`LogoMarkPhases`）。
     /// 動かさないとき（停止中・Reduce Motion・撮影モード）はアイコンの形
-    static func barScales(phase: Double, sound: LogoSound, isAnimating: Bool) -> [CGFloat] {
+    static func barScales(phases: [Double], sound: LogoSound, isAnimating: Bool) -> [CGFloat] {
         guard isAnimating else { return restingScales }
         let depth = depth(volume: sound.volume)
-        return barRateFactors(for: sound.frequencies).map { factor in
-            CGFloat(1 - depth * shape(sound.waveform, phase: phase * factor))
+        return restingScales.indices.map { index in
+            let phase = phases.indices.contains(index) ? phases[index] : 0
+            return CGFloat(1 - depth * shape(sound.waveform, phase: phase))
         }
     }
 
@@ -231,25 +241,33 @@ enum LogoMarkMotion {
     }
 }
 
-/// 速さが途中で変わる動きの位相（往復の回数）。速さを変えた時点の位相から続けて進めるので、速さが変わっても位相が飛ばない
-struct PhaseAccumulator {
-    /// `since` の時点の位相
-    private(set) var accumulated: Double = 0
-    /// 今の速さ（往復 / 秒）
-    private(set) var rate: Double = 0
-    /// 今の速さになった時刻（`PausableClock` の経過時間）
+/// マークの 5 本のバーの動きの位相（往復の回数）。バーごとに、速さを変えた時点の位相から続けて進めるので、
+/// 周波数や和音を変えて速さが変わっても長さが飛ばない。時刻は `PausableClock` の経過時間（止めている間は進まない）
+struct LogoMarkPhases {
+    /// `since` の時点の、バーごとの位相
+    private(set) var accumulated: [Double] = Array(repeating: 0, count: LogoMarkMotion.restingScales.count)
+    /// 今の、バーごとの速さ（往復 / 秒）
+    private(set) var rates: [Double] = Array(repeating: 0, count: LogoMarkMotion.restingScales.count)
+    /// 今の速さになった時刻
     private(set) var since: TimeInterval = 0
 
-    /// `time`（`PausableClock` の経過時間）の時点の位相
-    func phase(at time: TimeInterval) -> Double {
-        accumulated + rate * max(0, time - since)
+    /// `time` の時点の、バーごとの位相
+    func phases(at time: TimeInterval) -> [Double] {
+        let elapsed = max(0, time - since)
+        return zip(accumulated, rates).map { $0 + $1 * elapsed }
     }
 
-    /// `time` の時点から速さを `newRate` にする
-    mutating func setRate(_ newRate: Double, at time: TimeInterval) {
-        accumulated = phase(at: time)
+    /// `time` の時点から、バーごとの速さを `newRates` にする
+    mutating func setRates(_ newRates: [Double], at time: TimeInterval) {
+        accumulated = phases(at: time)
         since = max(since, time)
-        rate = newRate
+        rates = newRates + Array(repeating: 0, count: max(0, accumulated.count - newRates.count))
+    }
+
+    /// `time` の時点から、すべてのバーを位相 0（アイコンの形）から動かし直す。速さはそのまま
+    mutating func restart(at time: TimeInterval) {
+        accumulated = Array(repeating: 0, count: accumulated.count)
+        since = time
     }
 }
 

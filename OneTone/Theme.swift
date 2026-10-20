@@ -68,7 +68,8 @@ enum Theme {
         static let barRateFactors: [Double] = [0.83, 1.17, 1.0, 1.29, 0.71]
         /// 和音のときに構成音が 1 オクターブ上のバーを、根音のバーより何倍速く動かすか（構成音の比を対数で縮める）
         static let chordRateSpread: Double = 0.5
-        /// 1 本のバーの往復の速さの上限（往復 / 秒）。点滅に見えないよう 1 秒に 3 回を下回らせる（テストで確かめる）
+        /// 1 本のバーの往復の速さの上限（往復 / 秒）。点滅に見えないよう 1 秒に 3 回を下回らせる。
+        /// 今の値の組み合わせではいちばん速いバーでも約 2.3 往復 / 秒で、これを超える値にしても `LogoMarkMotion.barRates` が抑える
         static let maxBarRate: Double = 2.5
     }
 }
