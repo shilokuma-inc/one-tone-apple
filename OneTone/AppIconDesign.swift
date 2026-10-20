@@ -47,6 +47,15 @@ enum AppIconDesign {
             return path
         }
 
+        /// 図柄（半円の輪郭と 5 本のバー。線の太さを含む）の外接矩形。アイコンの書き出しには使わず、
+        /// メイン画面のロゴのマークで、背景の四角を除いた図柄だけを切り出すのに使う
+        static var markBounds: CGRect {
+            let halfWidth = bowlRadius + lineWidth / 2
+            let top = horizon - barLengths.center / 2
+            let bottom = horizon + bowlRadius + lineWidth / 2
+            return CGRect(x: 0.5 - halfWidth, y: top, width: halfWidth * 2, height: bottom - top)
+        }
+
         static func bar(_ rect: CGRect) -> CGPath {
             CGPath(roundedRect: rect, cornerWidth: lineWidth / 2, cornerHeight: lineWidth / 2, transform: nil)
         }
