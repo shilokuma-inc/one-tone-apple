@@ -42,7 +42,9 @@ struct TitleView: View {
                         barScales: LogoMarkMotion.barScales(
                             phases: phases.phases(at: elapsed),
                             sound: sound,
-                            isAnimating: isAnimating
+                            // 再生し直した直後は、時計を動かして位相を 0 に戻す（`.task(id:)`）より先に描かれることがある。
+                            // それまでは止めた時点の位相が残っているので、時計が動き出すまではアイコンの形にしておく
+                            isAnimating: isAnimating && clock.startedAt != nil
                         ),
                         hueDegrees: Self.hueDegrees(at: elapsed)
                     )
@@ -268,6 +270,48 @@ struct LogoMarkPhases {
     mutating func restart(at time: TimeInterval) {
         accumulated = Array(repeating: 0, count: accumulated.count)
         since = time
+    }
+}
+
+/// iOS 26 以上のバーの真ん中に出す小さいロゴ。大きいロゴがバーの下に隠れている間だけフェードで出す（Reduce Motion ではアニメーションなし）。
+/// 動きは付けない（再生中の演出は大きいロゴだけ）。色はテーマに追従する
+struct BarLogo: View {
+    /// 出しているか（`BarLogoVisibility.isShown`）
+    let isShown: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        // 隠している間は描かない（大きいロゴが見えているので二重に読ませない。ツールバーの中では accessibilityHidden が効かない）。
+        // ツールバーは中身の大きさが 0 のまま広がらないので、見えないロゴを敷いて大きさを取っておく
+        ZStack {
+            LogoLockup(textSize: Theme.Logo.barTextSize)
+                .hidden()
+                .accessibilityHidden(true)
+            if isShown {
+                LogoLockup(textSize: Theme.Logo.barTextSize)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("barLogo")
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: Theme.Logo.barFadeDuration), value: isShown)
+    }
+}
+
+/// バーの小さいロゴを出すかの判定。大きいロゴの下端がバーの下端より上（バーの下に隠れた）なら出し、
+/// バーの下端より `Theme.Logo.barLogoHysteresis` だけ下へ戻ったら消す。その間は今の状態を保つので、境目で行き来してもちらつかない
+enum BarLogoVisibility {
+    /// - Parameters:
+    ///   - largeLogoBottom: 大きいロゴの下端（pt。`barBottom` と同じ座標で、下ほど大きい）
+    ///   - barBottom: バーの下端（pt）
+    ///   - wasShown: 今出しているか
+    static func isShown(largeLogoBottom: CGFloat, barBottom: CGFloat, wasShown: Bool) -> Bool {
+        if largeLogoBottom <= barBottom {
+            return true
+        }
+        if largeLogoBottom > barBottom + Theme.Logo.barLogoHysteresis {
+            return false
+        }
+        return wasShown
     }
 }
 

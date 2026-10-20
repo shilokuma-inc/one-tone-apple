@@ -44,6 +44,29 @@ final class OneToneUITests: XCTestCase {
         XCTAssertEqual(logo.count, 1)
     }
 
+    #if os(iOS)
+    /// iOS 26 以上のバー: 大きいロゴが見えている間は小さいロゴを出さず、上へスワイプして大きいロゴがバーの下に隠れたら出し、戻すと消す
+    func testBarLogoAppearsWhenScrolledUp() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("iOS 26 未満はバーを出さない") }
+        let app = XCUIApplication()
+        app.launchArguments.append("-skip-tutorial")
+        app.launch()
+
+        // 小さいロゴは隠している間は読み上げから外しているので、要素として見えない
+        let barLogo = app.descendants(matching: .any)["barLogo"]
+        XCTAssertTrue(app.buttons["questionmark.circle"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(barLogo.exists)
+
+        app.swipeUp()
+        XCTAssertTrue(barLogo.waitForExistence(timeout: 3))
+
+        app.swipeDown()
+        app.swipeDown()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: barLogo)
+        wait(for: [gone], timeout: 3)
+    }
+    #endif
+
     /// 設定画面に同梱の書体のライセンス表記（LICENSES）があり、ライセンスの全文を開けること。
     /// PR に載せる画像のため、パネルと全文のスクリーンショットを残す
     func testSettingsShowsFontLicense() throws {

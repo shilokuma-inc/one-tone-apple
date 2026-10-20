@@ -57,6 +57,13 @@
 - macOS の `XCUIApplication().screenshot()` はアプリのウィンドウではなく画面全体（ほかのアプリのウィンドウも）を写す。PR に載せる画像は `app.windows.containing(.any, identifier: …).firstMatch.screenshot()` でウィンドウだけを撮る（2026-10-20）
 - macOS の UI テストでは `Text` の中身が `label` ではなく `value` に入る（iOS は `label`）。文言を確かめるときは両方を見る。Simulator の言語が日本語だとボタンのラベルも訳されるので、ボタンは `accessibilityIdentifier` か SF Symbols の名前（`gearshape` など。システムが識別子に入れる）で探す（2026-10-20）
 
+## iOS 26 のバー（NavigationStack のツールバー）
+
+- `ToolbarItem(placement: .principal)` の中身は、最初に大きさ 0（`if` で何も出していない）だと、あとで中身を出しても広がらず描かれない。見えない同じ View（`.hidden()`）を敷いて大きさを取っておく。中の View の `.accessibilityHidden` や `.opacity(0)` では XCUITest から要素として見えたままなので、出していない間は `if` で描かない（2026-10-20）
+- スクロールの中の部品がバーの下に隠れたかを、画面の座標（`frame(in: .global)` と `GeometryReader` の `safeAreaInsets.top`）で比べると、隠れていないのに隠れたと判定された（バーの高さを二重に数えた）。中身の座標空間（`.coordinateSpace(name:)`）での部品の下端と、`onScrollGeometryChange` の `contentOffset.y + contentInsets.top`（中身の上端からスクロールした量）で比べると合う（2026-10-20）
+- iOS 26 のスクロールの端の効果は既定（soft）だとバーの下に部品の文字がはっきり透け、真ん中に置いたものと重なる。`.scrollEdgeEffectStyle(.hard, for: .top)` でバーの帯として見える（2026-10-20）
+- `xcodebuild test` のログの `Test Case … started` は遅れて書き出されることがあり、それを待ってから `recordVideo` を始めると録り逃す。録画を先に始めてからテストを流し、終わってから止める（2026-10-20）
+
 ## 動画の撮影（PR 用）
 
 - この Mac には ffmpeg が無い。`simctl io recordVideo` で録った mp4 の中身を確かめるときは、`AVAssetImageGenerator`（`requestedTimeToleranceBefore/After = .zero`）でフレームを取り出す小さな Swift の CLI を `$TMPDIR` で作って画像にする（2026-10-20）
