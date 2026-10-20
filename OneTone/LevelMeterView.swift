@@ -37,7 +37,7 @@ struct LevelMeterView: View {
                 HStack(spacing: 3) {
                     ForEach(0..<LevelMeter.segmentCount, id: \.self) { index in
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(index < litCount ? LevelMeter.segmentColor(index, accent: themeColor.accent) : Theme.surfaceRaised)
+                            .fill(index < litCount ? LevelMeter.segmentColor(index, theme: themeColor) : Theme.surfaceRaised)
                             .frame(height: 12)
                     }
                 }
@@ -59,8 +59,11 @@ enum LevelMeter {
     /// 表示する範囲（dBFS）。これより小さいレベルは消灯
     static let floorDecibels: Double = -60
     static let segmentCount = 20
-    /// これ以上のレベルのセグメントは 2 つ目の差し色にして、大きすぎることを知らせる（dBFS）
-    static let warningDecibels: Double = -6
+    /// 左端（いちばん小さいレベル）のセグメントに混ぜる差し色の割合（0...1）。残りは消灯の色 `Theme.surfaceRaised`。
+    /// 右へ行くほど割合が直線で増え、右端で差し色そのものになる
+    static let faintestAccentRatio: Double = 0.35
+    /// 点灯したセグメントと消灯（`Theme.surfaceRaised`）のコントラスト比の下限。どのテーマのいちばん淡いセグメントもこれを満たす
+    static let minimumLitContrast: Double = 1.5
 
     /// RMS（二乗平均平方根）を dBFS で返す。振幅 1 のサイン波で約 -3dB。無音は -inf
     static func rmsDecibels(_ samples: [Float]) -> Double {
@@ -77,10 +80,25 @@ enum LevelMeter {
         return Int((ratio * Double(segmentCount)).rounded(.up))
     }
 
-    /// セグメントの位置（0 始まり）に対応する色。`warningDecibels` 以上はマゼンタ（テーマによらない）、それ以外はテーマの差し色 `accent`
-    static func segmentColor(_ index: Int, accent: Color) -> Color {
-        let decibels = floorDecibels + (-floorDecibels) * Double(index + 1) / Double(segmentCount)
-        return decibels > warningDecibels ? Theme.accentSecondary : accent
+    /// セグメントの位置（0 始まり）に混ぜる差し色の割合。左端で `faintestAccentRatio`、右端で 1
+    static func accentRatio(_ index: Int) -> Double {
+        let position = Double(min(max(index, 0), segmentCount - 1)) / Double(segmentCount - 1)
+        return faintestAccentRatio + (1 - faintestAccentRatio) * position
+    }
+
+    /// セグメントの位置（0 始まり）に対応する点灯色（0xRRGGBB）。消灯の色と差し色 `accentHex` を `accentRatio` で混ぜた不透明の色。
+    /// 色は位置だけで決まり、今のレベルでは変わらない（大きい音ほど濃いところまで点灯する）
+    static func segmentHex(_ index: Int, accentHex: UInt32) -> UInt32 {
+        let ratio = accentRatio(index)
+        return [16, 8, 0].reduce(UInt32(0)) { result, shift in
+            let from = Double((Theme.surfaceRaisedHex >> shift) & 0xFF)
+            let to = Double((accentHex >> shift) & 0xFF)
+            return result | UInt32((from + (to - from) * ratio).rounded()) << shift
+        }
+    }
+
+    static func segmentColor(_ index: Int, theme: ThemeColor) -> Color {
+        Color(hex: segmentHex(index, accentHex: theme.accentHex))
     }
 
     /// 表示用の dB 表記（1dB 単位）。範囲の下端より小さいときは「-inf dB」。単位の付け方は言語ごとの書式（catalog）に任せる
