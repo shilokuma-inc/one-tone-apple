@@ -7,6 +7,14 @@ import XCTest
 @testable import OneTone
 
 final class ScreenshotDemoTests: XCTestCase {
+    func testScreenshotModeFreezesAnimationsUnlessAnimateIsRequested() {
+        XCTAssertFalse(ScreenshotDemo.shouldFreezeAnimations(arguments: []))
+        XCTAssertFalse(ScreenshotDemo.shouldFreezeAnimations(arguments: ["-screenshot-animate"]))
+        XCTAssertTrue(ScreenshotDemo.shouldFreezeAnimations(arguments: ["-screenshot-demo", "-screenshot-scene", "sine"]))
+        // 動画を録るときは止めない（テストは DEBUG ビルドで動く）
+        XCTAssertFalse(ScreenshotDemo.shouldFreezeAnimations(arguments: ["-screenshot-demo", "-screenshot-animate"]))
+    }
+
     func testSceneIsReadFromLaunchArguments() {
         XCTAssertEqual(ScreenshotDemo.scene(from: ["-screenshot-demo", "-screenshot-scene", "square"]), .square)
         XCTAssertEqual(ScreenshotDemo.scene(from: ["-screenshot-scene", "sawtooth", "-screenshot-demo"]), .sawtooth)

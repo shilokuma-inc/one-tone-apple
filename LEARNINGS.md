@@ -57,6 +57,11 @@
 - macOS の `XCUIApplication().screenshot()` はアプリのウィンドウではなく画面全体（ほかのアプリのウィンドウも）を写す。PR に載せる画像は `app.windows.containing(.any, identifier: …).firstMatch.screenshot()` でウィンドウだけを撮る（2026-10-20）
 - macOS の UI テストでは `Text` の中身が `label` ではなく `value` に入る（iOS は `label`）。文言を確かめるときは両方を見る。Simulator の言語が日本語だとボタンのラベルも訳されるので、ボタンは `accessibilityIdentifier` か SF Symbols の名前（`gearshape` など。システムが識別子に入れる）で探す（2026-10-20）
 
+## 動画の撮影（PR 用）
+
+- この Mac には ffmpeg が無い。`simctl io recordVideo` で録った mp4 の中身を確かめるときは、`AVAssetImageGenerator`（`requestedTimeToleranceBefore/After = .zero`）でフレームを取り出す小さな Swift の CLI を `$TMPDIR` で作って画像にする（2026-10-20）
+- iPhone の撮影モードの `chord` / `note` シーンは FREQUENCY パネルまでスクロールするので、画面の上のロゴが写らない。和音モードの上の方を録るときは、使い捨ての UI テスト（起動引数 `-frequencyMode chord -AppleLanguages (en)` で起動し `Play Tone` を押して待つ）を流している間に `recordVideo` する（2026-10-20）
+
 ## ローカライズ（sync の差分）
 
 - `python3 Tools/sync_string_catalogs.py` を流すと、足したキーのほかに既存のキーの言語の並びまで書き換わり、catalog 全体が数百行の差分になることがある（`format_string_catalogs.py` は言語の並びを元に戻さない）。足したキーだけを元の catalog（`git show <base>:OneTone/Localizable.xcstrings`）に入れて format → verify すると、差分がそのキーだけになる（2026-10-20）

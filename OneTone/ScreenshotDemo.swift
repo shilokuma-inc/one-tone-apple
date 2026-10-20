@@ -19,6 +19,7 @@ import UniformTypeIdentifiers
 /// 撮影モードでは音を出さず、表示だけを「再生中」にする（`AudioManager.presentAsPlaying`）。
 /// また、撮影スクリプトは「連続で撮った 2 枚が一致するまで待つ」ので、タイトルの色相の回転や発光のゆらぎのような
 /// 止まらないアニメーションは `\.freezesAnimations` で止める。
+/// PR に付ける動画を録るときは `-screenshot-animate` も渡すと、撮影モードのまま動きを止めない（DEBUG ビルドだけで効く。配布ビルドでは無視する）。
 ///
 /// macOS では `-screenshot-output <PNG のパス>` も渡すと、画面に出さないウィンドウで画面を描いて PNG に保存し、すぐ終了する。
 /// CI のランナーにはディスプレイが無くウィンドウが作られないため、ウィンドウの撮影（screencapture）は使えない
@@ -119,6 +120,21 @@ enum ScreenshotDemo {
     static let launchArgument = "-screenshot-demo"
 
     static let isEnabled = ProcessInfo.processInfo.arguments.contains(launchArgument)
+
+    /// 撮影モードでも動きを止めない起動引数（ロゴの演出などの動画を録るため）
+    static let animateArgument = "-screenshot-animate"
+
+    /// 止まらないアニメーションを止めるか（`\.freezesAnimations` に渡す値）。撮影モードなら止め、`-screenshot-animate` があれば止めない
+    static let freezesAnimations = shouldFreezeAnimations(arguments: ProcessInfo.processInfo.arguments)
+
+    static func shouldFreezeAnimations(arguments: [String]) -> Bool {
+        guard arguments.contains(launchArgument) else { return false }
+        #if DEBUG
+        return !arguments.contains(animateArgument)
+        #else
+        return true
+        #endif
+    }
 
     /// 撮る画面。撮影モードでないときは nil
     static let scene: Scene? = isEnabled ? scene(from: ProcessInfo.processInfo.arguments) : nil
