@@ -44,6 +44,7 @@
 
 - iPhone の縦積みでは OUTPUT パネルが上、FREQUENCY パネルが下にあるので、音名・和音モードのように FREQUENCY パネルを見せたい画面は `ScreenshotDemo.Scene.scrollTarget` で `.frequency` まで送らないと写らない（iPad 13 inch / Mac は横並びなので送らなくても写る）（2026-10-18）
 - チュートリアルのページを足しても、`Tools/capture_tutorial_screenshots.sh` で撮るまで画像セットは無い。`Image("Tutorial-…")` は無い名前でも落ちずに空になるので、`UIImage(named:)` / `NSImage(named:)` で有無を見て代わりの表示を出す。撮影スクリプトの `PAGES` に足せば画像セット（Contents.json も）が作られ、コードを変えずに画像へ替わる（2026-10-18）
+- 撮影モードはテーマが既定（Cyan）で固定なので、部品の見え方を全テーマで比べるときは、部品のファイル（`LevelMeterView.swift` など）と `Theme.swift`・`ThemeColor.swift`・`NeonGlow.swift` を `$TMPDIR` に写して `#Preview` 以降を削り、`freezesAnimations` の EnvironmentKey を自前で定義した `main.swift`（`-parse-as-library` は付けない）と `swiftc` でまとめてコンパイルし、`ImageRenderer` に `.environment(\.themeColor, …)` を付けて描く。`TimelineView` と `shadow` の発光もそのまま描ける（macOS の `Slider` などは描けない。上の「macOS のスクリーンショット撮影」）。Before は `git show origin/develop:<ファイル>` を同じ手順でコンパイルする（2026-10-21）
 
 ## ロゴの書体（LogoFont）
 
