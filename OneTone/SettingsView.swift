@@ -150,27 +150,33 @@ struct LogoFontLicenseSection: View {
 /// ライセンスの全文の表示用の整形
 enum LicenseText {
     /// 72 桁前後で折り返してある原文（`OFL.txt`）の、段落の中の改行を空白にする。狭い画面で折り返しが二重になり、行が細切れになるのを防ぐ。
-    /// 空行・区切りの線（`---`）・見出し（小文字を含まない行）・番号付きの項目（`1)` など）の前後は改行のまま残す。文字は足し引きしない
+    /// 空行・区切りの線（`---`）・見出し・番号付きの項目（`1)` など）の前後は改行のまま残す。文字は足し引きしない
     static func reflowed(_ text: String) -> String {
         let lines = text.components(separatedBy: "\n")
         var result = ""
-        for (index, line) in lines.enumerated() {
-            result += line
+        for index in lines.indices {
+            result += lines[index]
             guard index + 1 < lines.count else { break }
-            result += joinsWithNext(line, lines[index + 1]) ? " " : "\n"
+            result += joinsWithNext(lines, at: index) ? " " : "\n"
         }
         return result
     }
 
-    private static func joinsWithNext(_ line: String, _ next: String) -> Bool {
+    private static func joinsWithNext(_ lines: [String], at index: Int) -> Bool {
+        let next = lines[index + 1]
         let startsItem = next.range(of: #"^\d+\)"#, options: .regularExpression) != nil
-        return !isBreak(line) && !isBreak(next) && !startsItem
+        return !isBreak(lines, at: index) && !isBreak(lines, at: index + 1) && !startsItem
     }
 
-    /// 前後で改行を残す行（空行・区切りの線・見出し）
-    private static func isBreak(_ line: String) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        return trimmed.isEmpty || trimmed.hasPrefix("-") || !trimmed.contains(where: \.isLowercase)
+    /// 前後で改行を残す行（空行・区切りの線・見出し）。見出しは空行の直後にある、小文字を含まない行
+    /// （DISCLAIMER の本文のように全部大文字の段落は、2 行目からは見出しにしない）
+    private static func isBreak(_ lines: [String], at index: Int) -> Bool {
+        let trimmed = lines[index].trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty || trimmed.hasPrefix("-") {
+            return true
+        }
+        let startsParagraph = index == 0 || lines[index - 1].trimmingCharacters(in: .whitespaces).isEmpty
+        return startsParagraph && !trimmed.contains(where: \.isLowercase)
     }
 }
 

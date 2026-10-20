@@ -721,13 +721,16 @@ final class OneToneTests: XCTestCase {
         XCTAssertTrue(lines.contains("PREAMBLE"))
         XCTAssertTrue(lines.contains { $0.hasPrefix("1) Neither the Font Software") })
         XCTAssertTrue(lines.contains { $0.hasPrefix("SIL OPEN FONT LICENSE Version 1.1") })
+        // 全部大文字の段落（DISCLAIMER の本文）も 1 行につながる
+        XCTAssertTrue(lines.contains("DISCLAIMER"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("THE FONT SOFTWARE IS PROVIDED") && $0.hasSuffix("OTHER DEALINGS IN THE FONT SOFTWARE.") })
     }
 
     func testLicenseReflowJoinsOnlyInsideParagraphs() {
-        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend"
+        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS\nBODY\n\nEND"
         XCTAssertEqual(
             LicenseText.reflowed(text),
-            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend"
+            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS BODY\n\nEND"
         )
     }
 }
