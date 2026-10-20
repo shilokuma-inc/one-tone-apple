@@ -10,6 +10,8 @@ import SwiftUI
 @main
 struct OneToneApp: App {
     init() {
+        // ロゴの書体は Data Set から登録して使うので、最初の画面（macOS の撮影モードの画面外の描画を含む）を描く前に登録しておく
+        LogoFont.registerIfNeeded()
         #if os(macOS)
         // 撮影モードで保存先が指定されていれば、ウィンドウを出さずに画面を PNG に描いて終了する
         ScreenshotDemo.renderIfRequested()
