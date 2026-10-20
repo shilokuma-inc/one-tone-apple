@@ -45,6 +45,39 @@ enum Theme {
     static let titleHueSwingPeriod: TimeInterval = 8
     /// 再生中にタイトルの色相を揺らす幅（度）。選んだ色の色相から -この値 〜 +この値 の間を行き来する（判断ログ #91）
     static let titleHueSwingAmplitude: Double = 30
+
+    /// ロゴ（アイコンのマーク＋「One Tone」）の寸法。文字の大きさを基準に、マークの高さと間隔を比で決める（判断ログ #265）
+    enum Logo {
+        /// メイン画面の大きいロゴの文字の大きさ（pt）の候補。大きい順に、幅に収まる最初のものを使う
+        /// （iPad・macOS は 56pt、iPhone は 48pt になる。56pt のロゴの幅は約 372pt）
+        static let largeTextSizes: [CGFloat] = [56, 48, 40, 32]
+        /// 文字の大きさに対するマークの高さ。マークを大文字より少し高くし、アイコンの図柄として見えるようにする
+        static let markHeightRatio: CGFloat = 0.95
+        /// 文字の大きさに対する、マークと文字の間隔
+        static let spacingRatio: CGFloat = 0.25
+        /// iOS 26 以上のバーに出す小さいロゴの文字の大きさ（pt）。ロゴの高さは約 26pt（判断ログ #265）
+        static let barTextSize: CGFloat = 20
+        /// バーの小さいロゴを出す・消すフェードの秒数（Q4: 実装後に触って調整する値）
+        static let barFadeDuration: TimeInterval = 0.2
+        /// バーの小さいロゴを消す境目のゆとり（pt）。大きいロゴの下端がバーの下端よりこれだけ下へ戻るまで消さず、境目でちらつかないようにする
+        static let barLogoHysteresis: CGFloat = 8
+    }
+
+    /// 再生中のロゴのマークのバーの動き（判断ログ #265）。バーはアイコンの長さを上限に縮んで戻り、イコライザーのように伸び縮みする
+    enum LogoMotion {
+        /// 音量 100% のときにバーが縮む深さ（0...1）。バーの長さはアイコンの長さ × (1 - 深さ × 音量) 〜 アイコンの長さの間を行き来する
+        static let maxDepth: Double = 0.6
+        /// 動きの基本の速さ（往復 / 秒）。鳴っている音（和音は根音）の周波数が 20Hz で `minRate`、20kHz で `maxRate`（対数で比例）
+        static let minRate: Double = 0.5
+        static let maxRate: Double = 1.2
+        /// バーごとの速さの倍率（左から）。そろって動かず、ばらけて見えるようにする
+        static let barRateFactors: [Double] = [0.83, 1.17, 1.0, 1.29, 0.71]
+        /// 和音のときに構成音が 1 オクターブ上のバーを、根音のバーより何倍速く動かすか（構成音の比を対数で縮める）
+        static let chordRateSpread: Double = 0.5
+        /// 1 本のバーの往復の速さの上限（往復 / 秒）。点滅に見えないよう 1 秒に 3 回を下回らせる。
+        /// 今の値の組み合わせではいちばん速いバーでも約 2.3 往復 / 秒で、これを超える値にしても `LogoMarkMotion.barRates` が抑える
+        static let maxBarRate: Double = 2.5
+    }
 }
 
 extension Color {

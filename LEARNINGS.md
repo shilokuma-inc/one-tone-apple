@@ -45,6 +45,34 @@
 - iPhone の縦積みでは OUTPUT パネルが上、FREQUENCY パネルが下にあるので、音名・和音モードのように FREQUENCY パネルを見せたい画面は `ScreenshotDemo.Scene.scrollTarget` で `.frequency` まで送らないと写らない（iPad 13 inch / Mac は横並びなので送らなくても写る）（2026-10-18）
 - チュートリアルのページを足しても、`Tools/capture_tutorial_screenshots.sh` で撮るまで画像セットは無い。`Image("Tutorial-…")` は無い名前でも落ちずに空になるので、`UIImage(named:)` / `NSImage(named:)` で有無を見て代わりの表示を出す。撮影スクリプトの `PAGES` に足せば画像セット（Contents.json も）が作られ、コードを変えずに画像へ替わる（2026-10-18）
 
+## ロゴの書体（LogoFont）
+
+- `CTFontManagerCreateFontDescriptorsFromData` で作った descriptor は URL を持たないので、`CTFontManagerRegisterFontDescriptors` に渡すと code 303 で登録されず、`CTFontCreateWithName` が Helvetica になる（エラーは完了ハンドラにしか来ない）。`CTFontManagerRegisterGraphicsFont` は iOS 18 / macOS 15 で非推奨。データをファイルに書き出して `CTFontManagerRegisterFontsForURL(…, .process, …)` で登録すると使える（2026-10-20）
+- 登録できたかは `CTFontCopyPostScriptName(CTFontCreateWithName(名前, …))` が名前と一致するかで見る。一致しない名前を渡すと落ちずに代わりの書体が返るので、目で見ないと気づかない（2026-10-20）
+
+## UI テスト
+
+- `ViewThatFits` と `TimelineView` の中の `HStack` に `.accessibilityElement(children: .ignore)` と `.accessibilityLabel` を付けたら、iOS ではまとめた要素と中の `Text` の両方が同じラベルの要素として出た（読み上げが 2 回になる）。マークのような飾りに `.accessibilityHidden(true)` を付け、要素を `Text` だけにすると 1 つになる。UI テストで同じラベルの要素の数を数えて確かめる（`testLogoIsReadOnce`）。見出しの trait は XCUITest からは見えない（`ElementType` に header が無い）（2026-10-20）
+
+- macOS の `XCUIApplication().screenshot()` はアプリのウィンドウではなく画面全体（ほかのアプリのウィンドウも）を写す。PR に載せる画像は `app.windows.containing(.any, identifier: …).firstMatch.screenshot()` でウィンドウだけを撮る（2026-10-20）
+- macOS の UI テストでは `Text` の中身が `label` ではなく `value` に入る（iOS は `label`）。文言を確かめるときは両方を見る。Simulator の言語が日本語だとボタンのラベルも訳されるので、ボタンは `accessibilityIdentifier` か SF Symbols の名前（`gearshape` など。システムが識別子に入れる）で探す（2026-10-20）
+
+## iOS 26 のバー（NavigationStack のツールバー）
+
+- `ToolbarItem(placement: .principal)` の中身は、最初に大きさ 0（`if` で何も出していない）だと、あとで中身を出しても広がらず描かれない。見えない同じ View（`.hidden()`）を敷いて大きさを取っておく。中の View の `.accessibilityHidden` や `.opacity(0)` では XCUITest から要素として見えたままなので、出していない間は `if` で描かない（2026-10-20）
+- スクロールの中の部品がバーの下に隠れたかを、画面の座標（`frame(in: .global)` と `GeometryReader` の `safeAreaInsets.top`）で比べると、隠れていないのに隠れたと判定された（バーの高さを二重に数えた）。中身の座標空間（`.coordinateSpace(name:)`）での部品の下端と、`onScrollGeometryChange` の `contentOffset.y + contentInsets.top`（中身の上端からスクロールした量）で比べると合う（2026-10-20）
+- iOS 26 のスクロールの端の効果は既定（soft）だとバーの下に部品の文字がはっきり透け、真ん中に置いたものと重なる。`.scrollEdgeEffectStyle(.hard, for: .top)` でバーの帯として見える（2026-10-20）
+- `xcodebuild test` のログの `Test Case … started` は遅れて書き出されることがあり、それを待ってから `recordVideo` を始めると録り逃す。録画を先に始めてからテストを流し、終わってから止める（2026-10-20）
+
+## 動画の撮影（PR 用）
+
+- この Mac には ffmpeg が無い。`simctl io recordVideo` で録った mp4 の中身を確かめるときは、`AVAssetImageGenerator`（`requestedTimeToleranceBefore/After = .zero`）でフレームを取り出す小さな Swift の CLI を `$TMPDIR` で作って画像にする（2026-10-20）
+- iPhone の撮影モードの `chord` / `note` シーンは FREQUENCY パネルまでスクロールするので、画面の上のロゴが写らない。和音モードの上の方を録るときは、使い捨ての UI テスト（起動引数 `-frequencyMode chord -AppleLanguages (en)` で起動し `Play Tone` を押して待つ）を流している間に `recordVideo` する（2026-10-20）
+
+## ローカライズ（sync の差分）
+
+- `python3 Tools/sync_string_catalogs.py` を流すと、足したキーのほかに既存のキーの言語の並びまで書き換わり、catalog 全体が数百行の差分になることがある（`format_string_catalogs.py` は言語の並びを元に戻さない）。足したキーだけを元の catalog（`git show <base>:OneTone/Localizable.xcstrings`）に入れて format → verify すると、差分がそのキーだけになる（2026-10-20）
+
 ## GitHub Actions
 
 - `workflow_dispatch` だけのワークフローは、既定ブランチに無いと `gh workflow run` / REST API から起動できない（404）。一度でも実行されれば登録されて `--ref <ブランチ>` で起動できるので、新規に足すときは一時的に PR ブランチへの `push` トリガーを付けて 1 回動かし、登録後に外す（2026-10-05）

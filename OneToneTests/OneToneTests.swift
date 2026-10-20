@@ -5,9 +5,12 @@
 //  Created by 村石 拓海 on 2024/05/28.
 //
 
+import CoreText
 import XCTest
 #if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
 #endif
 @testable import OneTone
 
@@ -669,5 +672,108 @@ final class OneToneTests: XCTestCase {
             XCTAssertNotNil(parsed, "\(frequency)")
             XCTAssertEqual(parsed!, frequency, accuracy: 0.5)
         }
+    }
+
+    // MARK: - ロゴの書体（LogoFont）
+
+    func testLogoFontDataAssetContainsTheFont() throws {
+        let asset = try XCTUnwrap(NSDataAsset(name: LogoFont.dataAssetName, bundle: .main))
+        let descriptors = try XCTUnwrap(CTFontManagerCreateFontDescriptorsFromData(asset.data as CFData) as? [CTFontDescriptor])
+        let names = descriptors.compactMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
+        XCTAssertEqual(names, [LogoFont.postScriptName])
+    }
+
+    func testLogoFontRegistersAndIsUsableByPostScriptName() {
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        // 代わりの書体（システムの書体）になっていない
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 20, nil)
+        XCTAssertEqual(CTFontCopyPostScriptName(font) as String, LogoFont.postScriptName)
+        XCTAssertEqual(CTFontCopyFamilyName(font) as String, LogoFont.familyName)
+    }
+
+    func testLogoFontRegistrationCanBeCalledTwice() {
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        XCTAssertTrue(LogoFont.isAvailable(postScriptName: LogoFont.postScriptName))
+    }
+
+    func testUnknownFontIsNotAvailable() {
+        // 登録していない名前は代わりの書体になるので、使えないと判定する（フォールバックの判定が効いている）
+        XCTAssertFalse(LogoFont.isAvailable(postScriptName: "OneTone-NoSuchFont"))
+    }
+
+    func testLogoFontLicenseTextIsBundled() throws {
+        let text = try XCTUnwrap(LogoFont.licenseText)
+        XCTAssertFalse(text.isEmpty)
+        XCTAssertTrue(text.contains("SIL OPEN FONT LICENSE Version 1.1"))
+        // 設定画面に出す著作権表示は、全文の 1 行目と同じ
+        XCTAssertEqual(text.components(separatedBy: .newlines).first, LogoFont.copyright)
+    }
+
+    func testLargeLogoSizesAreTriedFromLargest() {
+        // ViewThatFits は先に並べたものから試すので、大きい順に並べる
+        let sizes = Theme.Logo.largeTextSizes
+        XCTAssertEqual(sizes, sizes.sorted(by: >))
+        XCTAssertEqual(Set(sizes).count, sizes.count)
+        XCTAssertGreaterThan(sizes.last ?? 0, 0)
+    }
+
+    func testLogoMarkIsSlightlyTallerThanCapitals() throws {
+        // マークは大文字より高く、文字の大きさ（em）を超えない
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 100, nil)
+        let markHeight = 100 * Theme.Logo.markHeightRatio
+        XCTAssertGreaterThan(markHeight, CTFontGetCapHeight(font))
+        XCTAssertLessThanOrEqual(markHeight, 100)
+    }
+
+    func testBarLogoAppearsWhenLargeLogoIsUnderTheBar() {
+        // 大きいロゴの下端がバーの下端に届いたら（隠れたら）出す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 120, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: 100, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: -300, barBottom: 100, wasShown: false))
+        // 見えるところまで戻ったら消す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 100 + Theme.Logo.barLogoHysteresis + 1, barBottom: 100, wasShown: true))
+    }
+
+    func testBarLogoDoesNotFlickerAroundTheEdge() {
+        // 境目の少し下（ゆとりの中）では今の状態を保つので、1pt ずつ行き来しても切り替わらない
+        let edge: CGFloat = 100
+        var shown = false
+        for bottom in [101, 102, 101, 103, 102] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertFalse(shown)
+        }
+        shown = BarLogoVisibility.isShown(largeLogoBottom: edge, barBottom: edge, wasShown: shown)
+        XCTAssertTrue(shown)
+        for bottom in [101, 103, 102, edge + Theme.Logo.barLogoHysteresis, 101] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertTrue(shown, "\(bottom)")
+        }
+        XCTAssertGreaterThan(Theme.Logo.barLogoHysteresis, 0)
+    }
+
+    func testLicenseReflowKeepsTextAndParagraphs() throws {
+        let text = try XCTUnwrap(LogoFont.licenseText)
+        let reflowed = LicenseText.reflowed(text)
+        // 改行を空白に変えるだけで、文字は変えない
+        XCTAssertEqual(reflowed.filter { !$0.isWhitespace }, text.filter { !$0.isWhitespace })
+        XCTAssertLessThan(reflowed.components(separatedBy: "\n").count, text.components(separatedBy: "\n").count)
+        // 見出し・番号付きの項目・区切りの線は行頭に残る
+        let lines = reflowed.components(separatedBy: "\n")
+        XCTAssertTrue(lines.contains("PREAMBLE"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("1) Neither the Font Software") })
+        XCTAssertTrue(lines.contains { $0.hasPrefix("SIL OPEN FONT LICENSE Version 1.1") })
+        // 全部大文字の段落（DISCLAIMER の本文）も 1 行につながる
+        XCTAssertTrue(lines.contains("DISCLAIMER"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("THE FONT SOFTWARE IS PROVIDED") && $0.hasSuffix("OTHER DEALINGS IN THE FONT SOFTWARE.") })
+    }
+
+    func testLicenseReflowJoinsOnlyInsideParagraphs() {
+        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS\nBODY\n\nEND"
+        XCTAssertEqual(
+            LicenseText.reflowed(text),
+            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS BODY\n\nEND"
+        )
     }
 }

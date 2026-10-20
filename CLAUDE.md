@@ -117,6 +117,36 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 色はコントラストのテスト（`allCases` を固定の基準で判定する）が通るものを選ぶ（基準は緩めない。テストは CI では流れないので手元で流す）。
 テーマ色の数は Discussion #80 で 6〜8 色と決めているので、9 色目を足すなら先に仕様を決め直す。
 
+## ロゴ
+
+メイン画面の上のロゴは、アプリアイコンのマーク（半円＋5 本のバー）と「One Tone」の文字を横に並べたもの（Discussion #262）。
+文字の書体は、同梱した **Audiowide**（SIL Open Font License 1.1。Reserved Font Name「Audiowide」）。
+
+| もの | 場所 |
+| --- | --- |
+| フォントファイル（Google Fonts の `ofl/audiowide/` のものを改変せずに置く） | `OneTone/Assets.xcassets/LogoFont.dataset/` |
+| ライセンスの全文（`OFL.txt` のまま） | `OneTone/Assets.xcassets/LogoFontLicense.dataset/` |
+| ロゴ（`LogoLockup`）・マーク（`LogoMark`）・メイン画面の大きいロゴ（`TitleView`）・書体の登録と定数（`LogoFont`） | `OneTone/TitleView.swift` |
+| ロゴの寸法（文字の大きさの候補・マークの高さと間隔の比。`Theme.Logo`） | `OneTone/Theme.swift` |
+| ライセンス表記（設定画面の `LICENSES` のパネルと全文のシート） | `OneTone/SettingsView.swift`（`LogoFontLicenseSection`） |
+
+- フォントは Info.plist の `UIAppFonts` / `ATSApplicationFontsPath` を使わず、Asset Catalog の Data Set から読んで Core Text でプロセスに登録する（pbxproj と Info.plist を変えないため）。
+  データから作った descriptor は登録できないので、キャッシュのディレクトリに書き出したファイルを `CTFontManagerRegisterFontsForURL` で登録する（`LEARNINGS.md` の「ロゴの書体」）
+- 使うときは `LogoFont.font(size:)`。最初に呼ばれたときに 1 回だけ登録し、登録できなければシステムの太字になる。`OneToneApp.init` でも先に登録している
+- 書体を差し替えるときは、2 つの Data Set の中身と `LogoFont` の `postScriptName` / `familyName` / `copyright` を差し替える（コードの他の場所は変えなくてよい）。
+  OFL の書体だけを使い、改変（サブセット化を含む）しない（Reserved Font Name のある書体は、改変すると名前を変える義務がある）。`OneToneTests` の `testLogoFont…` が Data Set・登録・全文を確かめる
+- マークは `AppIconDesign.Geometry` の図柄を外接矩形（`markBounds`）で切り出して描き、ロゴ用の寸法は持たない（アイコンの見た目を変えると、ロゴのマークも一緒に変わる）。
+  色は既定のアプリアイコンと同じく白い線に中央のバーだけテーマの差し色、文字はテーマの `titleGradient`
+- 大きさは文字の大きさで指定する（`LogoLockup(textSize:)`）。メイン画面は `Theme.Logo.largeTextSizes` を大きい順に `ViewThatFits` で試し、幅に収まる最大のものを使う（iPad・macOS は 56pt、iPhone は 48pt）
+- 読み上げは文字の「One Tone」だけ（マークは `accessibilityHidden`）。`TitleView` が見出しの trait を付ける
+- iOS 26 以上（iPhone・iPad）だけ、メイン画面を `NavigationStack` に入れてバーを付ける（`ContentView.barredScreen`）。左に「？」、右に歯車、真ん中に小さいロゴ（`BarLogo`。文字 `Theme.Logo.barTextSize`）。
+  小さいロゴは大きいロゴがバーの下に隠れたらフェードで出し、戻ったら消す（判定は `BarLogoVisibility`。フェードの秒数 `barFadeDuration` と境目のゆとり `barLogoHysteresis` は `Theme.Logo`）。
+  iOS 26 未満と macOS は今までどおり画面の角にボタンを重ね（`overlaidScreen`）、バーも小さいロゴも出さない。分岐は `ContentView.mainScreen` の 1 か所
+- 再生中は、マークの 5 本のバーが鳴っている音に合わせて伸び縮みする（`LogoMarkMotion`。長さは位相と音の値から求める純粋な関数で、Unit テストは `NeonGlowTests`）。
+  音量 → 縮む深さ、周波数 → 速さ（対数）、波形 → 動きの形、和音 → 構成音の比でバーごとの速さを変える。文字の色相の揺れと発光は今までどおり。
+  速さ・深さの値は `Theme.LogoMotion`。どのバーも 1 秒に 3 往復を超えない（`maxBarRate`。点滅に見えないため）。停止中・Reduce Motion・撮影モードではアイコンの形で止まる
+- 書体名・著作権表示・ライセンスの全文・パネル名 `LICENSES` は訳さない（`Text(verbatim:)`）。全文は表示のときだけ段落の中の改行をつなぐ（`LicenseText.reflowed`。データは原文のまま）
+
 ## ブランチ運用・規約
 
 - 通常のフィーチャーブランチは `develop` 起点で切る。ralph-loop の作業ブランチは `epic/**` 起点で切り、PR もその epic 宛てに出す
@@ -137,6 +167,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 - 撮影はアプリの撮影モード（起動引数 `-screenshot-demo -screenshot-scene <名前>`、`OneTone/ScreenshotDemo.swift`）で行う。
   音は出さず表示だけ再生中にし（`AudioManager.presentAsPlaying`）、止まらないアニメーションは `\.freezesAnimations` で止める
   （撮影スクリプトは「連続 2 枚が一致するまで待つ」ため）。撮る画面を変えるときは `AppStore/screenshots.json` の scenes と `ScreenshotDemo.Scene` を合わせて直す
+  ロゴの演出などを PR 用に動画で録るときは、`-screenshot-animate` も渡すと撮影モードのまま動きを止めない（DEBUG ビルドだけで効く）
 - 手元で撮るなら、iOS は `Tools/capture_screenshots.sh APP_IPHONE_67`、macOS は `Tools/capture_mac_screenshots.sh`（出力は `build/screenshots/`）。
   macOS はウィンドウを撮るのではなく、アプリが `-screenshot-output` で画面外の `NSHostingView` を 2 倍のビットマップに描いて PNG にし
   （CI のランナーにはディスプレイが無くウィンドウが作られないため）、2880x1800 のキャンバスに合成する。撮影用ビルドだけ App Sandbox を外す
