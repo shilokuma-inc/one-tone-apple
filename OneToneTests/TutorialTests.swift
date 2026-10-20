@@ -86,11 +86,11 @@ final class TutorialTests: XCTestCase {
         }
     }
 
-    /// 画像を撮る前のページは記号を出す。既存のページの画像はアプリに入っている
+    /// すべてのページの画像がアプリに入っている（無いときに出す記号も持っている）
     func testPlaceholderSymbolsAndImages() {
         XCTAssertEqual(Tutorial.pages.first { $0.id == .note }?.placeholderSymbol, "music.note")
         XCTAssertEqual(Tutorial.pages.first { $0.id == .chord }?.placeholderSymbol, "pianokeys")
-        for id in [TutorialPage.ID.welcome, .playback, .frequency, .volume, .waveform] {
+        for id in TutorialPage.ID.allCases {
             XCTAssertTrue(TutorialImage.exists(named: "Tutorial-\(id.rawValue)"), "\(id) の画像が無い")
         }
         XCTAssertFalse(TutorialImage.exists(named: "Tutorial-does-not-exist"))
