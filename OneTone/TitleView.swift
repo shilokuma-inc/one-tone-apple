@@ -11,12 +11,12 @@ import UIKit
 import AppKit
 #endif
 
-/// 選んだテーマの差し色を中心にしたグラデーションのタイトル。グラデーションは常に表示し、色相の揺れと発光は再生中だけにする（停止中は静か）。
+/// メイン画面の上の大きいロゴ（アイコンのマーク＋「One Tone」。`LogoLockup`）。色は常に表示し、色相の揺れと発光は再生中だけにする（停止中は静か）。
 /// 色相は選んだ色の周りで ±`Theme.titleHueSwingAmplitude` 度だけ揺らし、別の色にはしない。
-/// Reduce Motion がオンのとき、またはスクリーンショットの撮影モードのときは揺らさない
+/// Reduce Motion がオンのとき、またはスクリーンショットの撮影モードのときは揺らさない。
+/// 大きさは `Theme.Logo.largeTextSizes` から、幅に収まる最大のものを選ぶ
 struct TitleView: View {
     let isPlaying: Bool
-    @Environment(\.themeColor) private var themeColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.freezesAnimations) private var freezesAnimations
     /// 揺れていた時間だけを数える時計。止めている間の時間を角度に含めず、再開したとき色が飛ばないようにする
@@ -29,7 +29,13 @@ struct TitleView: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isAnimating)) { context in
-            title(hue: Self.hueDegrees(at: clock.elapsed(at: context.date)))
+            ViewThatFits(in: .horizontal) {
+                ForEach(Theme.Logo.largeTextSizes, id: \.self) { size in
+                    LogoLockup(textSize: size)
+                }
+            }
+            .hueRotation(Angle(degrees: Self.hueDegrees(at: clock.elapsed(at: context.date))))
+            .neonGlow(Theme.accentSecondary, isActive: isPlaying)
         }
         // 表示時と、揺らす／止めるが切り替わるたびに時計を動かす・止める
         // （2 引数の onChange は macOS 14 からなので、表示時にも呼ばれる task(id:) を使う）
@@ -40,32 +46,8 @@ struct TitleView: View {
                 clock.stop(at: Date())
             }
         }
-    }
-
-    private func title(hue: Double) -> some View {
-        Text(verbatim: "One Tone")
-            .foregroundStyle(Theme.textPrimary)
-            .font(.custom("Helvetica Neue", size: 60))
-            .fontWeight(.bold)
-            // iPhone の幅では 60pt のままだとタイトルが収まらないので縮小を許可する
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .overlay(
-                LinearGradient(
-                    gradient: Gradient(colors: themeColor.titleGradient),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .mask(
-                    Text(verbatim: "One Tone")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                )
-                .font(.custom("Helvetica Neue", size: 60))
-                .fontWeight(.bold)
-                .hueRotation(Angle(degrees: hue))
-            )
-            .neonGlow(Theme.accentSecondary, isActive: isPlaying)
+        // マークは読み上げから外してあるので、読まれるのは文字の「One Tone」だけ。それを見出しにする
+        .accessibilityAddTraits(.isHeader)
     }
 
     /// 揺れていた時間（秒）に対する色相のずらし角（-振幅...+振幅）。
@@ -73,6 +55,61 @@ struct TitleView: View {
     /// 端で速度が 0 になるので、折り返しでカクつかない
     static func hueDegrees(at time: TimeInterval) -> Double {
         Theme.titleHueSwingAmplitude * sin(2 * .pi * time / Theme.titleHueSwingPeriod)
+    }
+}
+
+/// ロゴ（アイコンのマーク＋「One Tone」の文字）。マークが左、文字が右の横組みで、大きさは文字の大きさ `textSize` で決まる。
+/// メイン画面の大きいロゴ（`TitleView`）と、バーに出す小さいロゴで共有する。動きは持たない（演出は使う側で掛ける）。
+/// 文字は選んだテーマの `titleGradient`、マークは既定のアプリアイコンと同じく白い線に中央のバーだけテーマの差し色（判断ログ #265）。
+/// 読み上げは文字の「One Tone」の 1 回だけ（マークは `accessibilityHidden`）
+struct LogoLockup: View {
+    /// 文字の大きさ（pt）
+    let textSize: CGFloat
+    @Environment(\.themeColor) private var themeColor
+
+    var body: some View {
+        HStack(spacing: textSize * Theme.Logo.spacingRatio) {
+            LogoMark(height: textSize * Theme.Logo.markHeightRatio, line: Theme.textPrimary, accent: themeColor.accent)
+            Text(verbatim: "One Tone")
+                .font(LogoFont.font(size: textSize))
+                .foregroundStyle(
+                    LinearGradient(colors: themeColor.titleGradient, startPoint: .leading, endPoint: .trailing)
+                )
+                .lineLimit(1)
+                .fixedSize()
+        }
+    }
+}
+
+/// アプリアイコンの図柄（半円＋5 本のバー）だけを、背景の四角を除いて描くマーク。寸法は `AppIconDesign.Geometry` のまま使い、ロゴ用の数値を持たない
+struct LogoMark: View {
+    /// マークの高さ（pt）。幅は図柄の縦横比から決まる
+    let height: CGFloat
+    /// 半円と両側のバーの色
+    let line: Color
+    /// 中央のバーの色
+    let accent: Color
+
+    /// 図柄の幅 / 高さ
+    static let aspectRatio = AppIconDesign.Geometry.markBounds.width / AppIconDesign.Geometry.markBounds.height
+
+    var body: some View {
+        Canvas { context, size in
+            let bounds = AppIconDesign.Geometry.markBounds
+            // アイコンの座標（一辺 1・y が下向き）の図柄の外接矩形を、Canvas いっぱいに広げる
+            context.scaleBy(x: size.width / bounds.width, y: size.height / bounds.height)
+            context.translateBy(x: -bounds.minX, y: -bounds.minY)
+            context.stroke(
+                Path(AppIconDesign.Geometry.bowlArc),
+                with: .color(line),
+                style: StrokeStyle(lineWidth: AppIconDesign.Geometry.lineWidth, lineCap: .round)
+            )
+            for (index, rect) in AppIconDesign.Geometry.barRects.enumerated() {
+                context.fill(Path(AppIconDesign.Geometry.bar(rect)), with: .color(index == 2 ? accent : line))
+            }
+        }
+        .frame(width: height * Self.aspectRatio, height: height)
+        .accessibilityHidden(true)
     }
 }
 
@@ -200,4 +237,17 @@ struct PausableClock {
         .padding()
         .themedScreen()
         .environment(\.themeColor, .pink)
+}
+
+#Preview("iPhone の幅（375pt）") {
+    TitleView(isPlaying: false)
+        .padding()
+        .frame(width: 375)
+        .themedScreen()
+}
+
+#Preview("小さいロゴ（バー）") {
+    LogoLockup(textSize: 18)
+        .padding()
+        .themedScreen()
 }
