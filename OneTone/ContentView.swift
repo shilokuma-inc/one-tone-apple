@@ -33,7 +33,11 @@ struct ContentView: View {
     @State private var isShowingSettings = false
     /// iOS 26 以上のバーに小さいロゴを出しているか（大きいロゴがバーの下に隠れているか）
     @State private var showsBarLogo = false
+    /// スクロールの中身の上端から測った大きいロゴの下端（pt）
+    @State private var largeLogoBottom: CGFloat = .greatestFiniteMagnitude
     #endif
+    /// スクロールの中身の座標空間の名前
+    private static let deckContentSpace = "deckContent"
     /// チュートリアルを閉じたことがあるか。Skip / 完了 / 閉じる のどれでも立てる
     @AppStorage(Tutorial.hasSeenKey) private var hasSeenTutorial = false
     @State private var isShowingTutorial = false
@@ -143,10 +147,9 @@ struct ContentView: View {
                     VStack(spacing: 16) {
                         TitleView(isPlaying: audioManager.isPlaying, sound: logoSound)
                             #if os(iOS)
-                            // 大きいロゴがバーの下に隠れたかを見て、バーの小さいロゴを出し入れする（iOS 26 以上のバーで使う）
-                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
-                                let barBottom = proxy.frame(in: .global).minY + proxy.safeAreaInsets.top
-                                showsBarLogo = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: barBottom, wasShown: showsBarLogo)
+                            // スクロールの中身の上端から測った大きいロゴの下端（スクロールしても変わらない）。バーの小さいロゴの出し入れに使う
+                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.deckContentSpace)).maxY } action: { bottom in
+                                largeLogoBottom = bottom
                             }
                             #endif
                             .padding(.top)
@@ -169,10 +172,19 @@ struct ContentView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity)
+                    .coordinateSpace(name: Self.deckContentSpace)
                 }
                 #if os(iOS)
                 // 数値入力のキーボードをスクロールで閉じられるようにする（確定は従来どおり onSubmit）
                 .scrollDismissesKeyboard(.interactively)
+                // 中身の上端（バーの下端に合っている位置）からスクロールした量。大きいロゴがバーの下に隠れたら、バーに小さいロゴを出す（iOS 26 以上のバーで使う）
+                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, scrolled in
+                    showsBarLogo = BarLogoVisibility.isShown(
+                        largeLogoBottom: largeLogoBottom - scrolled,
+                        barBottom: 0,
+                        wasShown: showsBarLogo
+                    )
+                }
                 #endif
                 .onAppear {
                     // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
@@ -221,6 +233,8 @@ struct ContentView: View {
             deck
                 .background(Theme.background.ignoresSafeArea())
                 .navigationBarTitleDisplayMode(.inline)
+                // システムの既定（soft）では、バーの下に部品の文字がはっきり透けて小さいロゴと重なる。hard にして、バーの帯として見えるようにする
+                .scrollEdgeEffectStyle(.hard, for: .top)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button(action: openTutorial) {

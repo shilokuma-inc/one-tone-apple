@@ -279,12 +279,19 @@ struct BarLogo: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        LogoLockup(textSize: Theme.Logo.barTextSize)
-            .opacity(isShown ? 1 : 0)
-            .animation(reduceMotion ? nil : .easeInOut(duration: Theme.Logo.barFadeDuration), value: isShown)
-            // 隠している間は読み上げない（大きいロゴが見えているので二重に読ませない）
-            .accessibilityHidden(!isShown)
-            .accessibilityIdentifier("barLogo")
+        // 隠している間は描かない（大きいロゴが見えているので二重に読ませない。ツールバーの中では accessibilityHidden が効かない）。
+        // ツールバーは中身の大きさが 0 のまま広がらないので、見えないロゴを敷いて大きさを取っておく
+        ZStack {
+            LogoLockup(textSize: Theme.Logo.barTextSize)
+                .hidden()
+                .accessibilityHidden(true)
+            if isShown {
+                LogoLockup(textSize: Theme.Logo.barTextSize)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("barLogo")
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: Theme.Logo.barFadeDuration), value: isShown)
     }
 }
 
@@ -292,8 +299,8 @@ struct BarLogo: View {
 /// バーの下端より `Theme.Logo.barLogoHysteresis` だけ下へ戻ったら消す。その間は今の状態を保つので、境目で行き来してもちらつかない
 enum BarLogoVisibility {
     /// - Parameters:
-    ///   - largeLogoBottom: 大きいロゴの下端（画面の座標・pt）
-    ///   - barBottom: バーの下端（画面の座標・pt）
+    ///   - largeLogoBottom: 大きいロゴの下端（pt。`barBottom` と同じ座標で、下ほど大きい）
+    ///   - barBottom: バーの下端（pt）
     ///   - wasShown: 今出しているか
     static func isShown(largeLogoBottom: CGFloat, barBottom: CGFloat, wasShown: Bool) -> Bool {
         if largeLogoBottom <= barBottom {
