@@ -139,6 +139,9 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
   色は既定のアプリアイコンと同じく白い線に中央のバーだけテーマの差し色、文字はテーマの `titleGradient`
 - 大きさは文字の大きさで指定する（`LogoLockup(textSize:)`）。メイン画面は `Theme.Logo.largeTextSizes` を大きい順に `ViewThatFits` で試し、幅に収まる最大のものを使う（iPad・macOS は 56pt、iPhone は 48pt）
 - 読み上げは文字の「One Tone」だけ（マークは `accessibilityHidden`）。`TitleView` が見出しの trait を付ける
+- 再生中は、マークの 5 本のバーが鳴っている音に合わせて伸び縮みする（`LogoMarkMotion`。長さは位相と音の値から求める純粋な関数で、Unit テストは `NeonGlowTests`）。
+  音量 → 縮む深さ、周波数 → 速さ（対数）、波形 → 動きの形、和音 → 構成音の比でバーごとの速さを変える。文字の色相の揺れと発光は今までどおり。
+  速さ・深さの値は `Theme.LogoMotion`。どのバーも 1 秒に 3 往復を超えない（`maxBarRate`。点滅に見えないため）。停止中・Reduce Motion・撮影モードではアイコンの形で止まる
 - 書体名・著作権表示・ライセンスの全文・パネル名 `LICENSES` は訳さない（`Text(verbatim:)`）。全文は表示のときだけ段落の中の改行をつなぐ（`LicenseText.reflowed`。データは原文のまま）
 
 ## ブランチ運用・規約
@@ -161,6 +164,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 - 撮影はアプリの撮影モード（起動引数 `-screenshot-demo -screenshot-scene <名前>`、`OneTone/ScreenshotDemo.swift`）で行う。
   音は出さず表示だけ再生中にし（`AudioManager.presentAsPlaying`）、止まらないアニメーションは `\.freezesAnimations` で止める
   （撮影スクリプトは「連続 2 枚が一致するまで待つ」ため）。撮る画面を変えるときは `AppStore/screenshots.json` の scenes と `ScreenshotDemo.Scene` を合わせて直す
+  ロゴの演出などを PR 用に動画で録るときは、`-screenshot-animate` も渡すと撮影モードのまま動きを止めない（DEBUG ビルドだけで効く）
 - 手元で撮るなら、iOS は `Tools/capture_screenshots.sh APP_IPHONE_67`、macOS は `Tools/capture_mac_screenshots.sh`（出力は `build/screenshots/`）。
   macOS はウィンドウを撮るのではなく、アプリが `-screenshot-output` で画面外の `NSHostingView` を 2 倍のビットマップに描いて PNG にし
   （CI のランナーにはディスプレイが無くウィンドウが作られないため）、2880x1800 のキャンバスに合成する。撮影用ビルドだけ App Sandbox を外す
