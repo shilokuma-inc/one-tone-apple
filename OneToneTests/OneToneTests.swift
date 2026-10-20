@@ -710,6 +710,23 @@ final class OneToneTests: XCTestCase {
         XCTAssertEqual(text.components(separatedBy: .newlines).first, LogoFont.copyright)
     }
 
+    func testLargeLogoSizesAreTriedFromLargest() {
+        // ViewThatFits は先に並べたものから試すので、大きい順に並べる
+        let sizes = Theme.Logo.largeTextSizes
+        XCTAssertEqual(sizes, sizes.sorted(by: >))
+        XCTAssertEqual(Set(sizes).count, sizes.count)
+        XCTAssertGreaterThan(sizes.last ?? 0, 0)
+    }
+
+    func testLogoMarkIsSlightlyTallerThanCapitals() throws {
+        // マークは大文字より高く、文字の大きさ（em）を超えない
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 100, nil)
+        let markHeight = 100 * Theme.Logo.markHeightRatio
+        XCTAssertGreaterThan(markHeight, CTFontGetCapHeight(font))
+        XCTAssertLessThanOrEqual(markHeight, 100)
+    }
+
     func testLicenseReflowKeepsTextAndParagraphs() throws {
         let text = try XCTUnwrap(LogoFont.licenseText)
         let reflowed = LicenseText.reflowed(text)
