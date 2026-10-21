@@ -46,6 +46,8 @@
 - チュートリアルのページを足しても、`Tools/capture_tutorial_screenshots.sh` で撮るまで画像セットは無い。`Image("Tutorial-…")` は無い名前でも落ちずに空になるので、`UIImage(named:)` / `NSImage(named:)` で有無を見て代わりの表示を出す。撮影スクリプトの `PAGES` に足せば画像セット（Contents.json も）が作られ、コードを変えずに画像へ替わる（2026-10-18）
 - 撮影モードはテーマが既定（Cyan）で固定なので、部品の見え方を全テーマで比べるときは、部品のファイル（`LevelMeterView.swift` など）と `Theme.swift`・`ThemeColor.swift`・`NeonGlow.swift` を `$TMPDIR` に写して `#Preview` 以降を削り、`freezesAnimations` の EnvironmentKey を自前で定義した `main.swift`（`-parse-as-library` は付けない）と `swiftc` でまとめてコンパイルし、`ImageRenderer` に `.environment(\.themeColor, …)` を付けて描く。`TimelineView` と `shadow` の発光もそのまま描ける（macOS の `Slider` などは描けない。上の「macOS のスクリーンショット撮影」）。Before は `git show origin/develop:<ファイル>` を同じ手順でコンパイルする（2026-10-21）
 
+- `.sheet` の中身は、`.sheet` を付けた位置の environment を受け継ぐ。`ContentView` は `.environment(\.themeColor, …)` より後（外側）で `.sheet` を付けているので、シートの中で `@Environment(\.themeColor)` を読むと既定のテーマ（Cyan）になる。シートの中身にも `.environment(\.themeColor, …)` を付けて渡す（チュートリアルは `ContentView` で、設定画面は `SettingsView` 自身で付けている）。届いているかは、起動引数 `-themeColor pink -hasSeenTutorial NO` で起動する使い捨ての UI テストで、チュートリアルのボタンの色を見て確かめられる（2026-10-21）
+
 ## ロゴの書体（LogoFont）
 
 - `CTFontManagerCreateFontDescriptorsFromData` で作った descriptor は URL を持たないので、`CTFontManagerRegisterFontDescriptors` に渡すと code 303 で登録されず、`CTFontCreateWithName` が Helvetica になる（エラーは完了ハンドラにしか来ない）。`CTFontManagerRegisterGraphicsFont` は iOS 18 / macOS 15 で非推奨。データをファイルに書き出して `CTFontManagerRegisterFontsForURL(…, .process, …)` で登録すると使える（2026-10-20）
