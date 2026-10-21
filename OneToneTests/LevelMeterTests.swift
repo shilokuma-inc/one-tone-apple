@@ -47,15 +47,6 @@ final class LevelMeterTests: XCTestCase {
         XCTAssertEqual(LevelMeter.label(decibels: -0.4), "0 dB")
     }
 
-    func testSegmentsNeverUseSecondaryAccent() {
-        // -6dB を超えた位置のマゼンタはやめた（Discussion #279 Q3）。どのテーマもテーマの差し色の濃淡だけ
-        for theme in ThemeColor.allCases {
-            for index in 0..<LevelMeter.segmentCount {
-                XCTAssertNotEqual(LevelMeter.segmentColor(index, theme: theme), Theme.accentSecondary, "\(theme) \(index)")
-            }
-        }
-    }
-
     func testTopSegmentIsThemeAccent() {
         for theme in ThemeColor.allCases {
             XCTAssertEqual(LevelMeter.segmentHex(LevelMeter.segmentCount - 1, accentHex: theme.accentHex), theme.accentHex, "\(theme)")

@@ -7,7 +7,7 @@ import SwiftUI
 
 /// ユーザーが選べるテーマカラー（Discussion #80）。テーマで変わるのはメインの差し色 `accent` と、それに従属する値だけ。
 ///
-/// 2 つ目の差し色 `Theme.accentSecondary`・背景・パネル・文字色はどのテーマでも変えない。
+/// 背景・パネル・文字色はどのテーマでも変えない。画面の差し色はテーマの `accent` だけにする（Discussion #289 Q3）。
 /// `rawValue` は保存値になるので、リリース後に変えると既存ユーザーの選択が失われる。
 /// 色コードとコントラスト比の一覧は Issue #89 に載せている。
 enum ThemeColor: String, CaseIterable, Identifiable {
@@ -45,7 +45,6 @@ enum ThemeColor: String, CaseIterable, Identifiable {
         case .cyan: 0x00E5FF
         case .blue: 0x4D9DFF
         case .purple: 0xB07CFF
-        // マゼンタ（accentSecondary、色相 約 311°）と見分けやすいよう、色相を赤寄り（約 336°）にしている
         case .pink: 0xFF5C9D
         case .red: 0xFF4D4D
         case .orange: 0xFF9F1A
