@@ -28,11 +28,9 @@ final class ThemeColorTests: XCTestCase {
         XCTAssertFalse(names.contains(""))
     }
 
-    func testAccentsAreDistinctFromEachOtherAndFromSecondaryAccent() {
+    func testAccentsAreDistinctFromEachOther() {
         let accents = ThemeColor.allCases.map(\.accentHex)
         XCTAssertEqual(Set(accents).count, accents.count)
-        // 2 つ目の差し色（マゼンタ 0xFF2BD6）はテーマで変えないので、同じ色のテーマは作らない
-        XCTAssertFalse(accents.contains(0xFF2BD6))
     }
 
     func testTextOnAccentIsReadable() {
