@@ -22,6 +22,15 @@ final class TutorialTests: XCTestCase {
         suiteName = nil
     }
 
+    /// 音量のページの注意書きは、どのテーマでもテーマの差し色で、面（`Theme.surface`）の上で 4.5:1 以上ある（Discussion #289 Q3）
+    func testCautionUsesThemeAccentAndIsReadableOnSurface() {
+        for theme in ThemeColor.allCases {
+            let hex = TutorialPageView.cautionHex(for: theme)
+            XCTAssertEqual(hex, theme.accentHex, "\(theme)")
+            XCTAssertGreaterThanOrEqual(ColorContrast.ratio(hex, Theme.surfaceHex), 4.5, "\(theme) の注意書きと面")
+        }
+    }
+
     // MARK: - ページ定義
 
     func testPagesFollowAgreedOrder() {

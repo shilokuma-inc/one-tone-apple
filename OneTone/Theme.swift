@@ -15,7 +15,9 @@ enum Theme {
     /// `background` の 0xRRGGBB。コントラスト比の計算に使う
     static let backgroundHex: UInt32 = 0x0A0A0F
     /// 部品を載せる面（パネル）
-    static let surface = Color(hex: 0x16161F)
+    static let surface = Color(hex: surfaceHex)
+    /// `surface` の 0xRRGGBB。面の上に載せる文字のコントラスト比の確認に使う
+    static let surfaceHex: UInt32 = 0x16161F
     /// 一段持ち上げた面（押せる部品）
     static let surfaceRaised = Color(hex: surfaceRaisedHex)
     /// `surfaceRaised` の 0xRRGGBB。レベルメーターの濃淡の計算とコントラスト比の確認に使う
