@@ -15,6 +15,7 @@ struct TutorialView: View {
     let onDismiss: (TutorialDismissal) -> Void
 
     @State private var pager: TutorialPager
+    @Environment(\.themeColor) private var themeColor
     /// 周波数・波形ページの試聴。メイン画面とは別の音で鳴らす
     @StateObject private var trialPlayer: TutorialTrialPlayer
 
@@ -71,7 +72,7 @@ struct TutorialView: View {
             }
             .buttonStyle(.plain)
             .font(.body.weight(.semibold))
-            .foregroundStyle(Theme.accent)
+            .foregroundStyle(themeColor.accent)
             .opacity(pager.isLastPage ? 0 : 1)
             .disabled(pager.isLastPage)
             .accessibilityHidden(pager.isLastPage)
@@ -160,6 +161,13 @@ struct TutorialView: View {
 struct TutorialPageView: View {
     let page: TutorialPage
     let trialPlayer: TutorialTrialPlayer
+    @Environment(\.themeColor) private var themeColor
+
+    /// 注意書きの文字の色（0xRRGGBB）。ほかの部品と同じくテーマの差し色にする（Discussion #289 Q3）。
+    /// 面 `Theme.surface` の上に載せるので、どのテーマでも 4.5:1 以上あることをテストで確かめている
+    static func cautionHex(for theme: ThemeColor) -> UInt32 {
+        theme.accentHex
+    }
 
     /// 画面のスクリーンショット。まだ撮っていないページは、画像の代わりにページの記号を大きく出す
     @ViewBuilder
@@ -209,7 +217,7 @@ struct TutorialPageView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                     }
                         .font(.callout.weight(.semibold))
-                        .foregroundStyle(Theme.accentSecondary)
+                        .foregroundStyle(Color(hex: Self.cautionHex(for: themeColor)))
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(12)
@@ -232,6 +240,7 @@ struct TutorialPageView: View {
 struct TutorialTrialButtons: View {
     let sounds: [TutorialTrialPlayer.Sound]
     @ObservedObject var player: TutorialTrialPlayer
+    @Environment(\.themeColor) private var themeColor
 
     var body: some View {
         // 波形ごとのボタンは 2 列に並べる。狭い iPhone で 4 つを 1 行に置くと「Sawtooth」などが読めなくなる
@@ -249,7 +258,7 @@ struct TutorialTrialButtons: View {
                             .minimumScaleFactor(0.7)
                     }
                     .font(.system(.callout, design: .rounded).weight(isPlaying ? .bold : .medium))
-                    .foregroundStyle(isPlaying ? Theme.accent : Theme.textPrimary)
+                    .foregroundStyle(isPlaying ? themeColor.accent : Theme.textPrimary)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 10)
                     .frame(maxWidth: .infinity)
@@ -272,12 +281,13 @@ struct TutorialTrialButtons: View {
 struct TutorialPageIndicator: View {
     let pageCount: Int
     let index: Int
+    @Environment(\.themeColor) private var themeColor
 
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<pageCount, id: \.self) { page in
                 Capsule()
-                    .fill(page == index ? Theme.accent : Theme.textDisabled)
+                    .fill(page == index ? themeColor.accent : Theme.textDisabled)
                     .frame(width: page == index ? 20 : 8, height: 8)
             }
         }
@@ -289,13 +299,15 @@ struct TutorialPageIndicator: View {
 
 /// 次へ・完了のボタン。差し色で塗る
 private struct TutorialPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.themeColor) private var themeColor
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
-            .foregroundStyle(Theme.onAccent)
+            .foregroundStyle(themeColor.onAccent)
             .padding(.vertical, 10)
             .padding(.horizontal, 24)
-            .background(Capsule().fill(Theme.accent.opacity(configuration.isPressed ? 0.7 : 1)))
+            .background(Capsule().fill(themeColor.accent.opacity(configuration.isPressed ? 0.7 : 1)))
             .contentShape(Capsule())
     }
 }
