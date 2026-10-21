@@ -15,7 +15,9 @@ enum Theme {
     /// `background` の 0xRRGGBB。コントラスト比の計算に使う
     static let backgroundHex: UInt32 = 0x0A0A0F
     /// 部品を載せる面（パネル）
-    static let surface = Color(hex: 0x16161F)
+    static let surface = Color(hex: surfaceHex)
+    /// `surface` の 0xRRGGBB。面の上に載せる文字のコントラスト比の確認に使う
+    static let surfaceHex: UInt32 = 0x16161F
     /// 一段持ち上げた面（押せる部品）
     static let surfaceRaised = Color(hex: surfaceRaisedHex)
     /// `surfaceRaised` の 0xRRGGBB。レベルメーターの濃淡の計算とコントラスト比の確認に使う
@@ -30,8 +32,6 @@ enum Theme {
 
     /// 既定テーマ（ネオンシアン）の差し色。部品からは使わず、Environment の `themeColor` から取る
     static let accent = ThemeColor.default.accent
-    /// 2 つ目の差し色（ネオンマゼンタ）。再生中の強調などに使う
-    static let accentSecondary = Color(hex: 0xFF2BD6)
     /// 既定テーマの差し色の上に載せる文字。白ではシアン上で読めないため背景と同じ暗色にする（シアン上で 12.8:1）。
     /// 部品からは使わず、Environment の `themeColor` から取る
     static let onAccent = ThemeColor.default.onAccent
