@@ -14,6 +14,7 @@ import AppKit
 /// メイン画面の上の大きいロゴ（アイコンのマーク＋「One Tone」。`LogoLockup`）。再生中だけ動き、停止中は静か（マークはアイコンと同じ形）。
 /// 再生中は、マークの 5 本のバーが鳴っている音に合わせて伸び縮みし（`LogoMarkMotion`）、文字の色相が選んだ色の周りで
 /// ±`Theme.titleHueSwingAmplitude` 度だけ揺れ、発光する。Reduce Motion がオンのとき、またはスクリーンショットの撮影モードのときは動かさない。
+/// 発光はほかの部品と同じく選んだテーマの差し色（`themeColor.accent`）で、文字の色相が揺れても発光の色は一定（揺らさない）。
 /// 大きさは `Theme.Logo.largeTextSizes` から、幅に収まる最大のものを選ぶ
 struct TitleView: View {
     let isPlaying: Bool
@@ -51,7 +52,7 @@ struct TitleView: View {
                 }
             }
         }
-        .neonGlow(Theme.accentSecondary, isActive: isPlaying)
+        .neonGlow(isActive: isPlaying)
         // 表示時と、動かす／止めるが切り替わるたびに時計を動かす・止める
         // （2 引数の onChange は macOS 14 からなので、表示時にも呼ばれる task(id:) を使う）
         .task(id: isAnimating) {
