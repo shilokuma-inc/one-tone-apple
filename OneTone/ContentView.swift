@@ -79,13 +79,18 @@ struct ContentView: View {
         initialScrollTarget = screenshotScene?.scrollTarget
     }
     
+    /// 画面に使うテーマ。メイン画面とチュートリアルのシートで同じものを使う
+    private var displayedThemeColor: ThemeColor {
+        ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo)
+    }
+
     var body: some View {
         mainScreen
         #if os(macOS)
         .frame(minWidth: DeckLayout.minimumWindowSize.width, minHeight: DeckLayout.minimumWindowSize.height)
         #endif
         .themedScreen()
-        .environment(\.themeColor, ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo))
+        .environment(\.themeColor, displayedThemeColor)
         // 設定画面でモードを切り替えたら、パネルと鳴らす音を切り替える（再生は止めない）。
         // 音名モードへは最寄りの半音にそろえ、和音モードへは選んでいるコードを、和音モードから出るときは単音に戻す
         .onValueChange(of: frequencyMode) { mode in
@@ -117,6 +122,8 @@ struct ContentView: View {
             presentPendingVolumeCapNotice()
         }) {
             TutorialView(onDismiss: finishTutorial)
+                // シートは `.environment` より外で付けているので、中身にテーマを渡し直す（渡さないと既定のテーマになる）
+                .environment(\.themeColor, displayedThemeColor)
         }
         .alert(Text(VolumeCapNotice.title), isPresented: $isShowingVolumeCapNotice) {
             Button("OK", role: .cancel) {}
