@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""App Store の説明文・キーワード・プロモーションテキスト・URL・審査メモを App Store Connect に反映する。
+"""App Store の説明文・キーワード・プロモーションテキスト・URL・新機能・審査メモを App Store Connect に反映する。
 
 `AppStore/metadata/<言語>.json` と `AppStore/metadata/shared.json` を読み、
 対象バージョンの言語ごとに書き込む。`AppStore/metadata/review_notes.txt` があれば、
 App Review Information の Notes（審査メモ）にも書き込む。審査メモは言語ごとではなく
 バージョンごとに 1 つなので、言語によらず同じ内容になる。
+
+「このバージョンの新機能」（whatsNew）はバージョンごとに違う文なので、言語ごとの JSON には持たず
+`AppStore/metadata/whats_new/<バージョン>.json` に置く。反映先のバージョン名と一致するファイルだけを書き込み、
+無ければ App Store Connect 側の値をそのまま残す（前の版の文が次の版に載らないようにするため）。
 
     python3 Tools/upload_metadata.py            # 反映する
     python3 Tools/upload_metadata.py --dry-run  # 現在値との差分だけ出す
@@ -55,6 +59,12 @@ REVIEW_NOTES_FILE = "review_notes.txt"
 #: Notes の上限（App Store Connect の画面と同じ）
 REVIEW_NOTES_LIMIT = 4000
 
+#: 「このバージョンの新機能」を置くディレクトリ。`<バージョン>.json` に言語ごとの文を書く
+WHATS_NEW_DIR = "whats_new"
+
+#: whatsNew の上限（App Store Connect の画面と同じ）
+WHATS_NEW_LIMIT = 4000
+
 #: `--export` が書き出すファイルに付けるコメント（既にファイルがあればそちらの _comment を残す）
 SHARED_COMMENT = [
     "言語によらず同じ値を使う App Store のメタデータ。iOS / macOS の両バージョンに同じ値を書き込む。",
@@ -65,6 +75,10 @@ LANGUAGE_COMMENT = [
     "App Store の説明文など。上限: description 4000 字 / keywords 合計 100 字（カンマ込み）/ promotionalText 170 字。",
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。",
+]
+WHATS_NEW_COMMENT = [
+    "App Store の「このバージョンの新機能」（whatsNew）。ファイル名のバージョンにだけ反映する。上限 4000 字。",
+    "キーはこのリポジトリの言語コード（AppStore/languages.json の language）。全言語ぶん書く。",
 ]
 
 
@@ -99,6 +113,40 @@ def load_review_notes(directory: Path) -> tuple[str | None, list[str]]:
     if len(notes) > REVIEW_NOTES_LIMIT:
         return None, [f"{path} が {len(notes)} 字あります（上限 {REVIEW_NOTES_LIMIT} 字）"]
     return notes, []
+
+
+def load_whats_new(directory: Path, targets: list[Language]) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """バージョンごとの新機能の文（バージョン → 言語 → 文）を読む。ディレクトリが無ければ空。"""
+    folder = directory / WHATS_NEW_DIR
+    if not folder.is_dir():
+        return {}, []
+
+    known = {language.language for language in languages()}
+    result: dict[str, dict[str, str]] = {}
+    problems: list[str] = []
+    for path in sorted(folder.glob("*.json")):
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            problems.append(f"{path} が JSON として読めません: {error}")
+            continue
+        if not isinstance(raw, dict):
+            problems.append(f"{path}: 言語コードをキーにしたオブジェクトで書いてください")
+            continue
+        unknown = [key for key in raw if key != "_comment" and key not in known]
+        if unknown:
+            problems.append(f"{path}: languages.json に無い言語があります: {', '.join(unknown)}")
+        texts: dict[str, str] = {}
+        for target in targets:
+            text = raw.get(target.language)
+            if not (isinstance(text, str) and text.strip()):
+                problems.append(f"{path}: {target.language} がありません")
+            elif len(text) > WHATS_NEW_LIMIT:
+                problems.append(f"{path}: {target.language} が {len(text)} 字あります（上限 {WHATS_NEW_LIMIT} 字）")
+            else:
+                texts[target.language] = text
+        result[path.stem] = texts
+    return result, problems
 
 
 def apply_review_notes(client, version_id: str, notes: str, dry_run: bool) -> None:
@@ -220,10 +268,11 @@ def write_json(path: Path, body: dict, default_comment: list[str]) -> None:
 
 
 def export(directory: Path, targets: list[Language], current: dict[str, dict[str, dict]],
-           review_notes: dict[str, str]) -> int:
+           review_notes: dict[str, str], versions: dict[str, str]) -> int:
     """platform ごとの現在値（platform → store_locale → attributes）を AppStore/metadata に書き出す。
 
     `review_notes` は platform → 審査メモ。空のものは書き出さない。
+    `versions` は platform → バージョン名。新機能の文は `whats_new/<バージョン名>.json` に書き出す。
 
     both のときは iOS と macOS で値が食い違うことがある（別々に手で編集してきたため）。
     どちらを正にするかは人が決めることなので、食い違いがあれば書き出さずに差分を出して止める。
@@ -241,7 +290,7 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
             after = current[other].get(target.store_locale, {})
             lines = describe_changes(before, {
                 field: after.get(field) or ""
-                for field in ("description", "keywords", "promotionalText", "supportUrl", "marketingUrl")
+                for field in ("description", "keywords", "promotionalText", "supportUrl", "marketingUrl", "whatsNew")
             })
             if lines:
                 conflicts.append(f"  {target.store_locale}: {first} と {other} で値が違います")
@@ -270,6 +319,14 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
         print(f"  {target.language}.json（{target.store_locale}）:")
         for line in json.dumps(body, ensure_ascii=False, indent=2).splitlines():
             print(f"    {line}")
+    whats_new = {
+        target.language: values[target.store_locale]["whatsNew"]
+        for target in targets if values[target.store_locale].get("whatsNew")
+    }
+    if whats_new:
+        path = directory / WHATS_NEW_DIR / f"{versions[first]}.json"
+        write_json(path, whats_new, WHATS_NEW_COMMENT)
+        print(f"  {WHATS_NEW_DIR}/{path.name}: {len(whats_new)} 言語")
     if review_notes.get(first):
         (directory / REVIEW_NOTES_FILE).write_text(review_notes[first] + "\n", encoding="utf-8")
         print(f"  {REVIEW_NOTES_FILE}: {len(review_notes[first])} 字")
@@ -318,9 +375,12 @@ def main() -> int:
 
     entries: list[tuple[Language, dict[str, str]]] = []
     review_notes: str | None = None
+    whats_new: dict[str, dict[str, str]] = {}
     if not args.export:
         shared, problems = load_shared(args.metadata_dir)
         review_notes, issues = load_review_notes(args.metadata_dir)
+        problems.extend(issues)
+        whats_new, issues = load_whats_new(args.metadata_dir, targets)
         problems.extend(issues)
         for target in targets:
             attributes, issues = load(args.metadata_dir, target, shared)
@@ -336,6 +396,9 @@ def main() -> int:
                 f"{field} {len(attributes[field])} 字" for field in LIMITS if field in attributes
             )
             print(f"  {target.language}: {counts}")
+        for version_string, texts in whats_new.items():
+            longest = max((len(text) for text in texts.values()), default=0)
+            print(f"  新機能 {version_string}: {len(texts)} 言語（最長 {longest} 字）")
         if review_notes is not None:
             print(f"  審査メモ: {len(review_notes)} 字")
         print(f"問題なし: {len(entries)} 言語")
@@ -365,6 +428,7 @@ def main() -> int:
     failures: list[str] = []
     exported: dict[str, dict[str, dict]] = {}
     exported_notes: dict[str, str] = {}
+    exported_versions: dict[str, str] = {}
     skipped: list[str] = []
     applied = 0
     for platform in target_platforms:
@@ -381,6 +445,7 @@ def main() -> int:
         available = client.localization_entries(version["id"])
         if args.export:
             exported[platform] = {locale: entry["attributes"] for locale, entry in available.items()}
+            exported_versions[platform] = version_string
             for locale in available:
                 print(f"  {locale}: 現在値を読みました")
             detail = client.review_detail(version["id"])
@@ -388,10 +453,18 @@ def main() -> int:
             print(f"  審査メモ: {'現在値を読みました' if exported_notes[platform] else '空です'}")
             continue
 
+        # 新機能の文は、このバージョン名のファイルがあるときだけ書き込む
+        version_whats_new = whats_new.get(version_string)
+        if version_whats_new is None:
+            print(f"  新機能: {WHATS_NEW_DIR}/{version_string}.json が無いので App Store Connect 側の値を残します")
+
         # スクリーンショットのときと同じく、書き込む前に全言語ぶんの前提を確かめる
         plan: list[tuple[Language, dict[str, str], dict | None]] = []
         missing_locales: list[str] = []
         for target, attributes in entries:
+            if version_whats_new is not None:
+                # 読み込み時に全言語そろっていることを確かめてある
+                attributes = {**attributes, "whatsNew": version_whats_new[target.language]}
             localization = available.get(target.store_locale)
             if localization is None:
                 if args.missing_locales == "create":
@@ -457,7 +530,7 @@ def main() -> int:
                   "--platform で片方を選んでください。")
             status = 1
         else:
-            status = export(args.metadata_dir, targets, exported, exported_notes)
+            status = export(args.metadata_dir, targets, exported, exported_notes, exported_versions)
     else:
         print(f"完了: {applied} 件（platform × 言語）")
         if skipped:
