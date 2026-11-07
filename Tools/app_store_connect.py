@@ -56,7 +56,10 @@ TOKEN_REFRESH_MARGIN = 5 * 60
 
 
 class ApiError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        #: HTTP のステータスコード。404 のような「無い」を呼び出し側で見分けるのに使う
+        self.status = status
 
 
 class AppStoreConnect:
@@ -89,7 +92,7 @@ class AppStoreConnect:
                 raw = response.read()
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")
-            raise ApiError(f"{method} {url} が {error.code} で失敗しました\n{detail}") from None
+            raise ApiError(f"{method} {url} が {error.code} で失敗しました\n{detail}", error.code) from None
         return json.loads(raw) if raw else {}
 
     def get(self, path: str, params: dict | None = None) -> dict:
@@ -195,6 +198,41 @@ class AppStoreConnect:
                 "data": {
                     "type": "appStoreVersionLocalizations",
                     "attributes": {**(attributes or {}), "locale": locale},
+                    "relationships": {
+                        "appStoreVersion": {
+                            "data": {"type": "appStoreVersions", "id": version_id}
+                        }
+                    },
+                }
+            },
+        )
+        return response["data"]["id"]
+
+    # MARK: 審査情報（App Review Information）
+
+    def review_detail(self, version_id: str) -> dict | None:
+        """そのバージョンの `appStoreReviewDetails`（審査メモなど）。まだ作られていなければ None。
+
+        説明文と違って言語ごとではなく、バージョン（= platform）ごとに 1 つだけある。
+        """
+        try:
+            response = self.get(f"/v1/appStoreVersions/{version_id}/appStoreReviewDetail")
+        except ApiError as error:
+            if error.status == 404:
+                return None
+            raise
+        return response.get("data")
+
+    def create_review_detail(self, version_id: str, attributes: dict) -> str:
+        """そのバージョンに審査情報を作る。審査に一度も出していないバージョンでは無いことがある。"""
+        if self.dry_run:
+            return "dry-run"
+        response = self.post(
+            "/v1/appStoreReviewDetails",
+            {
+                "data": {
+                    "type": "appStoreReviewDetails",
+                    "attributes": attributes,
                     "relationships": {
                         "appStoreVersion": {
                             "data": {"type": "appStoreVersions", "id": version_id}

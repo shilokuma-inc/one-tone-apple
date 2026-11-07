@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""App Store の説明文・キーワード・プロモーションテキスト・URL を App Store Connect に反映する。
+"""App Store の説明文・キーワード・プロモーションテキスト・URL・審査メモを App Store Connect に反映する。
 
 `AppStore/metadata/<言語>.json` と `AppStore/metadata/shared.json` を読み、
-対象バージョンの言語ごとに書き込む。
+対象バージョンの言語ごとに書き込む。`AppStore/metadata/review_notes.txt` があれば、
+App Review Information の Notes（審査メモ）にも書き込む。審査メモは言語ごとではなく
+バージョンごとに 1 つなので、言語によらず同じ内容になる。
 
     python3 Tools/upload_metadata.py            # 反映する
     python3 Tools/upload_metadata.py --dry-run  # 現在値との差分だけ出す
@@ -47,6 +49,12 @@ LIMITS = {
     "promotionalText": 170,
 }
 
+#: App Review Information の Notes に書く内容。言語によらず 1 つ。無ければ App Store Connect 側の値をそのまま残す
+REVIEW_NOTES_FILE = "review_notes.txt"
+
+#: Notes の上限（App Store Connect の画面と同じ）
+REVIEW_NOTES_LIMIT = 4000
+
 #: `--export` が書き出すファイルに付けるコメント（既にファイルがあればそちらの _comment を残す）
 SHARED_COMMENT = [
     "言語によらず同じ値を使う App Store のメタデータ。iOS / macOS の両バージョンに同じ値を書き込む。",
@@ -77,6 +85,44 @@ def load_shared(directory: Path) -> tuple[dict[str, str], list[str]]:
         elif required:
             problems.append(f"{path}: {key} がありません")
     return attributes, problems
+
+
+def load_review_notes(directory: Path) -> tuple[str | None, list[str]]:
+    """審査メモを読む。ファイルが無ければ None（App Store Connect 側の値を残す）。"""
+    path = directory / REVIEW_NOTES_FILE
+    if not path.is_file():
+        return None, []
+    # 末尾の改行の有無で毎回差分が出ないよう、前後の空白は落として比べる
+    notes = path.read_text(encoding="utf-8").strip()
+    if not notes:
+        return None, [f"{path} が空です（使わないならファイルごと消す）"]
+    if len(notes) > REVIEW_NOTES_LIMIT:
+        return None, [f"{path} が {len(notes)} 字あります（上限 {REVIEW_NOTES_LIMIT} 字）"]
+    return notes, []
+
+
+def apply_review_notes(client, version_id: str, notes: str, dry_run: bool) -> None:
+    """そのバージョンの審査メモを `notes` にする。審査情報がまだ無ければ作る。"""
+    detail = client.review_detail(version_id)
+    if detail is None:
+        client.create_review_detail(version_id, {"notes": notes})
+        print(f"  審査メモ: {'審査情報を作って書き込む予定' if dry_run else '審査情報を作って書き込み'}")
+        for line in describe_changes({}, {"notes": notes}):
+            print(line)
+        return
+
+    changes = describe_changes({"notes": (detail["attributes"].get("notes") or "").strip()}, {"notes": notes})
+    if not changes:
+        print("  審査メモ: 変更なし")
+        return
+    print(f"  審査メモ: {'書き込む予定' if dry_run else '書き込み'}")
+    for line in changes:
+        print(line)
+    if not dry_run:
+        client.patch(
+            f"/v1/appStoreReviewDetails/{detail['id']}",
+            {"data": {"type": "appStoreReviewDetails", "id": detail["id"], "attributes": {"notes": notes}}},
+        )
 
 
 def load(directory: Path, target: Language, shared: dict[str, str]) -> tuple[dict[str, str] | None, list[str]]:
@@ -173,8 +219,11 @@ def write_json(path: Path, body: dict, default_comment: list[str]) -> None:
     path.write_text(json.dumps({"_comment": comment, **body}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def export(directory: Path, targets: list[Language], current: dict[str, dict[str, dict]]) -> int:
+def export(directory: Path, targets: list[Language], current: dict[str, dict[str, dict]],
+           review_notes: dict[str, str]) -> int:
     """platform ごとの現在値（platform → store_locale → attributes）を AppStore/metadata に書き出す。
+
+    `review_notes` は platform → 審査メモ。空のものは書き出さない。
 
     both のときは iOS と macOS で値が食い違うことがある（別々に手で編集してきたため）。
     どちらを正にするかは人が決めることなので、食い違いがあれば書き出さずに差分を出して止める。
@@ -197,6 +246,10 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
             if lines:
                 conflicts.append(f"  {target.store_locale}: {first} と {other} で値が違います")
                 conflicts.extend(lines)
+        lines = describe_changes({"notes": review_notes.get(first, "")}, {"notes": review_notes.get(other, "")})
+        if lines:
+            conflicts.append(f"  審査メモ: {first} と {other} で値が違います")
+            conflicts.extend(lines)
     if conflicts:
         print("platform の間で現在値が食い違っているため書き出しません。--platform で片方を選んでください。")
         print("\n".join(conflicts))
@@ -217,6 +270,13 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
         print(f"  {target.language}.json（{target.store_locale}）:")
         for line in json.dumps(body, ensure_ascii=False, indent=2).splitlines():
             print(f"    {line}")
+    if review_notes.get(first):
+        (directory / REVIEW_NOTES_FILE).write_text(review_notes[first] + "\n", encoding="utf-8")
+        print(f"  {REVIEW_NOTES_FILE}: {len(review_notes[first])} 字")
+    elif (directory / REVIEW_NOTES_FILE).is_file():
+        # 消すと次の upload で App Store Connect 側の値を残す扱いになり、意図が変わるので手元のファイルは触らない
+        print(f"  {REVIEW_NOTES_FILE}: App Store Connect 側が空のため書き出しません。"
+              "手元のファイルは残っているので、次の upload でその内容が反映されます")
     print(f"書き出しました: {directory}（{first} の現在値）")
     return 0
 
@@ -257,8 +317,11 @@ def main() -> int:
     target_platforms = platforms(args.platform)
 
     entries: list[tuple[Language, dict[str, str]]] = []
+    review_notes: str | None = None
     if not args.export:
         shared, problems = load_shared(args.metadata_dir)
+        review_notes, issues = load_review_notes(args.metadata_dir)
+        problems.extend(issues)
         for target in targets:
             attributes, issues = load(args.metadata_dir, target, shared)
             problems.extend(issues)
@@ -273,6 +336,8 @@ def main() -> int:
                 f"{field} {len(attributes[field])} 字" for field in LIMITS if field in attributes
             )
             print(f"  {target.language}: {counts}")
+        if review_notes is not None:
+            print(f"  審査メモ: {len(review_notes)} 字")
         print(f"問題なし: {len(entries)} 言語")
         return 0
 
@@ -299,6 +364,7 @@ def main() -> int:
     # もう片方は進める。失敗は最後にまとめて非ゼロで返す
     failures: list[str] = []
     exported: dict[str, dict[str, dict]] = {}
+    exported_notes: dict[str, str] = {}
     skipped: list[str] = []
     applied = 0
     for platform in target_platforms:
@@ -317,6 +383,9 @@ def main() -> int:
             exported[platform] = {locale: entry["attributes"] for locale, entry in available.items()}
             for locale in available:
                 print(f"  {locale}: 現在値を読みました")
+            detail = client.review_detail(version["id"])
+            exported_notes[platform] = ((detail or {}).get("attributes", {}).get("notes") or "").strip()
+            print(f"  審査メモ: {'現在値を読みました' if exported_notes[platform] else '空です'}")
             continue
 
         # スクリーンショットのときと同じく、書き込む前に全言語ぶんの前提を確かめる
@@ -377,6 +446,9 @@ def main() -> int:
                 )
             applied += 1
 
+        if review_notes is not None:
+            apply_review_notes(client, version["id"], review_notes, args.dry_run)
+
     if args.export:
         if failures and len(target_platforms) > 1:
             # 片方しか読めていないと platform 間の食い違いを確かめられない。
@@ -385,7 +457,7 @@ def main() -> int:
                   "--platform で片方を選んでください。")
             status = 1
         else:
-            status = export(args.metadata_dir, targets, exported)
+            status = export(args.metadata_dir, targets, exported, exported_notes)
     else:
         print(f"完了: {applied} 件（platform × 言語）")
         if skipped:

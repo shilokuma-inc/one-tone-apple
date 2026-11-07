@@ -1,0 +1,26 @@
+1. Screen recording
+The app has no account registration, login, user-generated content or paid content, so the typical user flow consists only of the steps in section 3. A screen recording captured on a physical device is provided through our App Review reply in App Store Connect when requested.
+
+2. Purpose and target audience
+OneTone is a simple tone generator. It plays a steady tone at any frequency from 20 Hz to 20,000 Hz, with a choice of four waveforms (Sine, Square, Triangle, Sawtooth).
+- Purpose: to provide a constant, distraction-free tone that helps users focus or relax while working or studying, and a quick reference tone for checking speakers or headphones, tuning instruments (e.g. 440 Hz) and learning how pitch and waveform affect sound.
+- Target audience: students and people who want a background tone to concentrate, musicians, and audio hobbyists.
+- Value: it starts in one tap with no setup, works fully offline, and shows the actual output on an oscilloscope-style waveform display and a level meter.
+
+3. How to use the app
+No login, account, setup or sample files are required. All features are available immediately after launch.
+1) Launch the app. The main screen shows the waveform display, the OUTPUT panel and the FREQUENCY panel.
+2) Tap PLAY to start the tone. Tap STOP to stop it.
+3) Change the frequency with the knob, the slider, the number field (enter a value in Hz and press Return/Done) or the preset buttons (100 Hz / 440 Hz / 1 kHz / 10 kHz). The tone changes while playing.
+4) Select a waveform: Sine, Square, Triangle or Sawtooth.
+5) Adjust the VOLUME fader. The level meter and the waveform display follow the actual output.
+Note: tones near 20 Hz or 20,000 Hz may be hard to hear depending on the speakers and the listener. Please start at a moderate volume.
+
+4. External services
+None. The app does not use any external services, SDKs, servers, authentication, payment processors, analytics, advertising or AI services. It does not connect to the network. Sound is generated entirely on the device with Apple's AVFoundation (AVAudioEngine).
+
+5. Regional differences
+None. The app functions and displays the same content in all regions.
+
+6. Regulated industries / third-party material
+Not applicable. The app does not operate in a regulated industry, is not a medical or hearing-test device, and does not include any third-party protected material. All sounds are synthesized by the app.

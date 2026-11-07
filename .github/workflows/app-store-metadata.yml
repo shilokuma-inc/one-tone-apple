@@ -1,8 +1,9 @@
 name: Metadata/App Store
 
-# App Store の説明文・キーワード・プロモーションテキスト・URL を App Store Connect に反映する。
+# App Store の説明文・キーワード・プロモーションテキスト・URL・審査メモを App Store Connect に反映する。
 #
-# 元ネタは AppStore/metadata/<言語>.json と shared.json。欠損と文字数超過は
+# 元ネタは AppStore/metadata/<言語>.json と shared.json。review_notes.txt があれば、
+# App Review Information の Notes（審査メモ。言語によらず 1 つ）にも書き込む。欠損と文字数超過は
 # Verify/App Store metadata が PR の時点で落とすので、ここまで来たものは通る前提。
 #
 # このアプリは iOS と macOS を同じ Bundle ID で配信しているが、App Store Connect のバージョン（と説明文）は
@@ -151,5 +152,12 @@ jobs:
                 cat "$file"
                 echo '```'
               done
+              if [ -f AppStore/metadata/review_notes.txt ]; then
+                echo
+                echo "### AppStore/metadata/review_notes.txt"
+                echo '```text'
+                cat AppStore/metadata/review_notes.txt
+                echo '```'
+              fi
             fi
           } >> "$GITHUB_STEP_SUMMARY"
