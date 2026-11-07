@@ -152,6 +152,19 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 - 通常のフィーチャーブランチは `develop` 起点で切る。ralph-loop の作業ブランチは `epic/**` 起点で切り、PR もその epic 宛てに出す
 - コミット: `[type] 日本語の説明`。PR タイトル: `【TYPE】タイトル`。Assignee に自分を設定する
 
+## リリースの流れ
+
+1. develop の最新から `release/vX.Y.Z` を切って push する（`MARKETING_VERSION` が X.Y.Z になっていること）。
+   `release/**` への push で `Upload` が iOS / macOS の両方を App Store Connect にアップロードする（ビルド番号は UTC の日時）
+2. develop の `MARKETING_VERSION`（OneTone ターゲットの Debug / Release）を次の版に上げ、`CURRENT_PROJECT_VERSION` も 1 つ上げる（#113 / #303）。
+   上げないと、develop の push ごとのアップロードがリリース中の版に混ざり、その版の配信後は弾かれる
+3. App Store Connect に iOS / macOS それぞれの X.Y.Z のバージョンを作る（ツールでは作らない）
+4. 掲載内容の修正（説明文・`whats_new/X.Y.Z.json`・審査メモ）は `release/vX.Y.Z` 宛ての PR にする。マージ後、`release/vX.Y.Z` で
+   `Metadata/App Store` を dry-run → upload（App Store Connect に無い言語は `missing_locales: create`）し、`Screenshots/App Store` で撮り直して反映する
+5. App Store Connect で iOS / macOS それぞれにビルドを選んで審査に出す
+6. 承認されたら GitHub の Release（タグ `vX.Y.Z`）を作り、`release/vX.Y.Z` を main に PR（`【Release】vX.Y.Z`）でマージする
+7. `release/vX.Y.Z` を develop に取り込んで戻す（v1.1.0 ではこれが漏れ、release に直接入れた #108 / #110 が develop に無かった。#305）
+
 ## App Store の掲載情報
 
 手動で発火する GitHub Actions で、App Store Connect の**編集中のバージョン**に反映する（審査中・配信済みのバージョンには触らない）。
@@ -161,7 +174,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 | ワークフロー | 反映するもの | 元ネタ |
 | --- | --- | --- |
 | `Screenshots/App Store` | スクリーンショット（iPhone 6.9 inch / iPad 13 inch → iOS、Mac → macOS。言語は `AppStore/languages.json` の 12 言語。主言語は ja） | `AppStore/screenshots.json` / `AppStore/languages.json` |
-| `Metadata/App Store` | 説明文・キーワード・プロモーションテキスト・URL（`mode`: dry-run（既定）/ upload / export、`platform`: both / ios / macos） | `AppStore/metadata/*.json` |
+| `Metadata/App Store` | 説明文・キーワード・プロモーションテキスト・URL・新機能・審査メモ（`mode`: dry-run（既定）/ upload / export、`platform`: both / ios / macos） | `AppStore/metadata/*.json` / `whats_new/<バージョン>.json` / `review_notes.txt` |
 | `Verify/App Store metadata` | PR で metadata の欠損・文字数超過と撮影設定の整合を検査 | 同上 |
 
 - 撮影はアプリの撮影モード（起動引数 `-screenshot-demo -screenshot-scene <名前>`、`OneTone/ScreenshotDemo.swift`）で行う。
@@ -176,6 +189,9 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
   撮る画面は `ScreenshotDemo.Scene` の `tutorial-*` で、`AppStore/screenshots.json` は使わない
 - 説明文の JSON は App Store Connect の現在値を正とする。初回や手で編集されたあとは `Metadata/App Store` を `mode: export` で実行し、
   Job Summary / artifact の JSON を `AppStore/metadata/` に取り込んでから `dry-run` で差分ゼロを確かめる。手元の検査は `python3 Tools/upload_metadata.py --check`
+- 「このバージョンの新機能」（whatsNew）は `AppStore/metadata/whats_new/<バージョン>.json` に全言語ぶん書く。反映先のバージョン名と一致するファイルだけが書き込まれ、
+  無いバージョンでは App Store Connect 側の値を残す（前の版の文が次の版に載らないよう、言語ごとの JSON には持たない）
+- 審査メモ（App Review Information の Notes）は `AppStore/metadata/review_notes.txt`。言語ごとではなくバージョンに 1 つで、上限 4000 字。画面や機能を変えたリリースでは合わせて直す
 - 認証は Organization secrets の App Store Connect API Key（`APPLE_API_KEY_*`）。手元に .p8 は無いので、App Store Connect の状態確認は CI の dry-run で行う
 - PR 本文のスクリーンショットは `gh pr create --attach`（gh v2.99.0 以上）で添付する（assets ブランチは使わない）。本文は Markdown の表に `![Before](./before.png)` の形で書き、
   作成後に `<img width="300">` に置き換える（手順は shilokuma-inc/template-app-ios の README の「PR 本文のスクリーンショット」）
