@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """App Store Connect API の薄いクライアント。
 
-スクリーンショット（`upload_screenshots.py`）とメタデータ（`upload_metadata.py`）の
-両方から使う。認証・バージョンの絞り込み・言語（`appStoreVersionLocalizations`）の
-取り回しは共通なので、ここに 1 つだけ置く。
+スクリーンショット（`upload_screenshots.py`）・メタデータ（`upload_metadata.py`）・
+クリエイティブアセット（`upload_creative_assets.py`）から使う。認証・バージョンの絞り込み・
+言語（`appStoreVersionLocalizations`）の取り回しは共通なので、ここに 1 つだけ置く。
 
 認証は App Store Connect API Key（.p8）。次の環境変数から読む想定。
 
