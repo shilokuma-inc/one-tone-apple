@@ -2,8 +2,10 @@
   "_comment": [
     "言語によらず同じ値を使う App Store のメタデータ。iOS / macOS の両バージョンに同じ値を書き込む。",
     "supportUrl は Apple の審査で実際に開かれるので、必ず到達できる URL にすること。",
-    "marketingUrl も必須。無いと --check（PR の検査）で落ちる。"
+    "marketingUrl も必須。無いと --check（PR の検査）で落ちる。",
+    "privacyPolicyUrl も必須。全言語の App 情報に書き込む（空の言語があると審査に出せない）。無いと --check（PR の検査）で落ちる。"
   ],
   "supportUrl": "https://docs.google.com/forms/d/e/1FAIpQLSc4DiUAcjKlrchuefXxehD-BgCEhGVomX6NOwtijWiE0yJAlQ/viewform",
-  "marketingUrl": "https://shilokuma.jp"
+  "marketingUrl": "https://shilokuma.jp",
+  "privacyPolicyUrl": "https://shilokuma.jp/privacy/one-tone/"
 }
