@@ -3,6 +3,7 @@ name: Verify/App Store metadata
 # App Store の説明文などは、文字数の上限を超えていると App Store Connect への反映時に弾かれる。
 # 反映（Metadata/App Store）の前に、PR の時点で欠損と文字数超過を機械的に落とす。
 # あわせて、スクリーンショットの撮影設定（枚数の上限・platform など）も読めるか確かめる。
+# クリエイティブアセットの画像（AppStore/creative/<言語>/）も、全言語ぶんの有無・寸法・透過を確かめる。
 # JSON を読むだけなので macOS ランナーもビルドも必要ない。
 
 on:
@@ -31,3 +32,6 @@ jobs:
           python3 Tools/app_store_config.py bundle-id
           python3 Tools/app_store_config.py scenes
           python3 Tools/app_store_config.py display-types
+
+      - name: Verify creative assets
+        run: python3 Tools/upload_creative_assets.py --check
