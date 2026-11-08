@@ -248,12 +248,18 @@ class AppStoreConnect:
             raise SystemExit(f"編集できる App 情報が {len(editable)} 件あります")
         if editable:
             return editable[0], True
+        # appInfos の返却順は保証されていないので、順番で「新しいもの」を選ばない。候補が 1 件に決まらなければ止める
         newer = [info for info in infos
                  if app_info_state(info) not in ("READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_INFO")]
-        candidates = newer or infos
-        if not candidates:
+        if len(newer) > 1:
+            states = ", ".join(sorted(app_info_state(info) for info in newer))
+            raise SystemExit(f"審査中などの App 情報が {len(newer)} 件あります（{states}）。どれを読むか決められません")
+        if newer:
+            return newer[0], False
+        live = [info for info in infos if app_info_state(info) == "READY_FOR_DISTRIBUTION"]
+        if not live:
             raise SystemExit("App 情報がありません")
-        return candidates[0], False
+        return live[0], False
 
     def app_info_localizations(self, app_info_id: str) -> dict[str, dict]:
         """ロケール → そのロケールの `appInfoLocalizations`（アプリ名などの現在値を含む）。"""
