@@ -341,20 +341,7 @@ class AppStoreConnect:
             },
         )
         screenshot_id = reserved["data"]["id"]
-
-        # 本体は Apple が指定する URL へ、指示どおりに分割して送る
-        for operation in reserved["data"]["attributes"]["uploadOperations"]:
-            offset = operation["offset"]
-            chunk = data[offset:offset + operation["length"]]
-            request = urllib.request.Request(operation["url"], data=chunk, method=operation["method"])
-            for header in operation.get("requestHeaders", []):
-                request.add_header(header["name"], header["value"])
-            try:
-                with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT):
-                    pass
-            except urllib.error.HTTPError as error:
-                detail = error.read().decode(errors="replace")
-                raise ApiError(f"{path.name} の転送が {error.code} で失敗しました\n{detail}") from None
+        transfer(path.name, data, reserved["data"]["attributes"]["uploadOperations"])
 
         self.patch(
             f"/v1/appScreenshots/{screenshot_id}",
@@ -420,3 +407,22 @@ def make_token(key_id: str, issuer_id: str, private_key: str) -> str:
         algorithm="ES256",
         headers={"kid": key_id, "typ": "JWT"},
     )
+
+
+def transfer(file_name: str, data: bytes, operations: list[dict]) -> None:
+    """予約で返ってきた `uploadOperations` のとおりに、本体を Apple が指定する URL へ分割して送る。
+
+    スクリーンショットとクリエイティブアセット（App Asset Library の画像）で同じ手順になる。
+    """
+    for operation in operations:
+        offset = operation["offset"]
+        chunk = data[offset:offset + operation["length"]]
+        request = urllib.request.Request(operation["url"], data=chunk, method=operation["method"])
+        for header in operation.get("requestHeaders", []):
+            request.add_header(header["name"], header["value"])
+        try:
+            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT):
+                pass
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode(errors="replace")
+            raise ApiError(f"{file_name} の転送が {error.code} で失敗しました\n{detail}") from None
