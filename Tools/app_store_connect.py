@@ -221,7 +221,7 @@ class AppStoreConnect:
         アプリ名は言語ごとに App 情報（`appInfoLocalizations`）にあり、iOS / macOS で共通。
         配信中のもの（READY_FOR_DISTRIBUTION）とは別に、次のバージョンの準備中だけ編集できるものがある。
         """
-        infos = self.get_all(f"/v1/apps/{app_id}/appInfos", {"limit": 50})
+        infos = self.app_infos(app_id)
         editable = [info for info in infos if app_info_state(info) in EDITABLE_STATES]
         if len(editable) != 1:
             states = ", ".join(sorted(app_info_state(info) for info in infos))
@@ -230,6 +230,30 @@ class AppStoreConnect:
                 "App Store Connect で次のバージョンを作ってから実行してください。"
             )
         return editable[0]
+
+    def app_infos(self, app_id: str) -> list[dict]:
+        """そのアプリの `appInfos` を全部返す（配信中・審査中・準備中など）。"""
+        return self.get_all(f"/v1/apps/{app_id}/appInfos", {"limit": 50})
+
+    def current_app_info(self, app_id: str) -> tuple[dict, bool]:
+        """いちばん新しい App 情報と、それを編集できるかを返す。
+
+        編集できるもの（次のバージョンの準備中）があればそれを、無ければ審査中などのもの、
+        それも無ければ配信中のものを返す。片方の platform だけ審査に出したあとは、
+        App 情報（iOS / macOS で共通）は審査中になり、もう片方の準備中でも編集できない。
+        """
+        infos = self.app_infos(app_id)
+        editable = [info for info in infos if app_info_state(info) in EDITABLE_STATES]
+        if len(editable) > 1:
+            raise SystemExit(f"編集できる App 情報が {len(editable)} 件あります")
+        if editable:
+            return editable[0], True
+        newer = [info for info in infos
+                 if app_info_state(info) not in ("READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_INFO")]
+        candidates = newer or infos
+        if not candidates:
+            raise SystemExit("App 情報がありません")
+        return candidates[0], False
 
     def app_info_localizations(self, app_info_id: str) -> dict[str, dict]:
         """ロケール → そのロケールの `appInfoLocalizations`（アプリ名などの現在値を含む）。"""
