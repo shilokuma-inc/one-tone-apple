@@ -10,6 +10,10 @@ App Review Information の Notes（審査メモ）にも書き込む。審査メ
 `AppStore/metadata/whats_new/<バージョン>.json` に置く。反映先のバージョン名と一致するファイルだけを書き込み、
 無ければ App Store Connect 側の値をそのまま残す（前の版の文が次の版に載らないようにするため）。
 
+`<言語>.json` の `name` は、その言語のアプリ名（App 情報。iOS / macOS で共通）に書き込む。
+App Store のアプリ名は言語ごとに重複を判定され、言語を追加すると主言語の名前が使われるので、
+その名前を別のアプリが使っている言語は `name` で別の名前を指定してから追加する。
+
     python3 Tools/upload_metadata.py            # 反映する
     python3 Tools/upload_metadata.py --dry-run  # 現在値との差分だけ出す
     python3 Tools/upload_metadata.py --check    # App Store Connect につながず、手元のファイルだけ検査する
@@ -48,10 +52,14 @@ SHARED_FILE = "shared.json"
 
 #: App Store Connect 側の上限。超えると反映時に弾かれるので、手元で先に落とす。
 LIMITS = {
+    "name": 30,
     "description": 4000,
     "keywords": 100,
     "promotionalText": 170,
 }
+
+#: アプリ名の項目。説明文などと違い、バージョンではなく App 情報（appInfoLocalizations）に書き込む
+APP_NAME_FIELD = "name"
 
 #: App Review Information の Notes に書く内容。言語によらず 1 つ。無ければ App Store Connect 側の値をそのまま残す
 REVIEW_NOTES_FILE = "review_notes.txt"
@@ -74,6 +82,7 @@ SHARED_COMMENT = [
 LANGUAGE_COMMENT = [
     "App Store の説明文など。上限: description 4000 字 / keywords 合計 100 字（カンマ込み）/ promotionalText 170 字。",
     "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
+    "name（アプリ名。上限 30 字）も省略できる。主言語の名前を別のアプリが使っている言語は、ここで別の名前にする。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。",
 ]
 WHATS_NEW_COMMENT = [
@@ -173,6 +182,41 @@ def apply_review_notes(client, version_id: str, notes: str, dry_run: bool) -> No
         )
 
 
+def apply_app_names(client, app_id: str, targets: list[Language], names: dict[str, str],
+                    missing_locales: str, dry_run: bool) -> None:
+    """言語ごとのアプリ名（App 情報。iOS / macOS で共通）を `names`（言語 → 名前）にする。
+
+    App 情報に無い言語は、`missing_locales` が create のときだけ、指定した名前で作る。
+    説明文の言語を追加する前に呼ぶこと（先に説明文の言語を作ると、主言語の名前で App 情報が作られる）。
+    """
+    info = client.editable_app_info(app_id)
+    available = client.app_info_localizations(info["id"])
+    print("アプリ名（App 情報。iOS / macOS で共通）")
+    for target in targets:
+        name = names.get(target.language)
+        if name is None:
+            continue
+        label = f"{target.language} → {target.store_locale}"
+        entry = available.get(target.store_locale)
+        if entry is None:
+            if missing_locales != "create":
+                print(f"  {label}: App 情報に無い言語なので飛ばします（追加するなら --missing-locales create）")
+                continue
+            client.create_app_info_localization(info["id"], target.store_locale, {APP_NAME_FIELD: name})
+            print(f"  {label}: {'言語を追加して書き込む予定' if dry_run else '言語を追加して書き込み'} — {name}")
+            continue
+        current = entry["attributes"].get(APP_NAME_FIELD) or ""
+        if current == name:
+            print(f"  {label}: 変更なし（{name}）")
+            continue
+        print(f"  {label}: {'書き込む予定' if dry_run else '書き込み'} — {current or '（空）'} → {name}")
+        if not dry_run:
+            client.patch(
+                f"/v1/appInfoLocalizations/{entry['id']}",
+                {"data": {"type": "appInfoLocalizations", "id": entry["id"], "attributes": {APP_NAME_FIELD: name}}},
+            )
+
+
 def load(directory: Path, target: Language, shared: dict[str, str]) -> tuple[dict[str, str] | None, list[str]]:
     """1 言語ぶんの書き込む値を読む。問題があれば値の代わりに理由を返す。"""
     path = directory / f"{target.language}.json"
@@ -185,6 +229,13 @@ def load(directory: Path, target: Language, shared: dict[str, str]) -> tuple[dic
 
     problems: list[str] = []
     attributes: dict[str, str] = {}
+
+    name = raw.get(APP_NAME_FIELD)
+    if name is not None:
+        if isinstance(name, str) and name.strip():
+            attributes[APP_NAME_FIELD] = name
+        else:
+            problems.append(f"{path}: {APP_NAME_FIELD} が空です（使わないなら項目ごと消す）")
 
     description = raw.get("description")
     if isinstance(description, str) and description.strip():
@@ -244,6 +295,8 @@ def exported_shared(attributes: dict) -> dict:
 def exported_language(attributes: dict) -> dict:
     """App Store Connect の現在値から <言語>.json の中身を組み立てる。"""
     result: dict = {}
+    if attributes.get(APP_NAME_FIELD):
+        result[APP_NAME_FIELD] = attributes[APP_NAME_FIELD]
     if attributes.get("promotionalText"):
         result["promotionalText"] = attributes["promotionalText"]
     result["description"] = attributes.get("description") or ""
@@ -469,6 +522,26 @@ def main() -> int:
     if args.dry_run:
         print("--dry-run: App Store Connect には何も書き込みません")
 
+    # アプリ名はバージョンではなく App 情報（iOS / macOS で共通）にあるので、platform ごとの処理の前に 1 回だけ扱う。
+    # 説明文の言語を追加する前に、指定した名前で App 情報の言語を作っておく
+    names: dict[str, str] = {}
+    for target, attributes in entries:
+        if APP_NAME_FIELD in attributes:
+            names[target.language] = attributes.pop(APP_NAME_FIELD)
+    current_names: dict[str, str] = {}
+    if args.export:
+        try:
+            info = client.editable_app_info(app["id"])
+            current_names = {
+                locale: entry["attributes"].get(APP_NAME_FIELD) or ""
+                for locale, entry in client.app_info_localizations(info["id"]).items()
+            }
+        except SystemExit as error:
+            print(f"アプリ名は書き出しません: {error}")
+    elif names:
+        apply_app_names(client, app["id"], [target for target, _ in entries], names,
+                        args.missing_locales, args.dry_run)
+
     # platform ごとにバージョンは別物なので、片方に編集できるバージョンが無くても
     # もう片方は進める。失敗は最後にまとめて非ゼロで返す
     failures: list[str] = []
@@ -490,7 +563,10 @@ def main() -> int:
 
         available = client.localization_entries(version["id"])
         if args.export:
-            exported[platform] = {locale: entry["attributes"] for locale, entry in available.items()}
+            exported[platform] = {
+                locale: {**entry["attributes"], APP_NAME_FIELD: current_names.get(locale, "")}
+                for locale, entry in available.items()
+            }
             exported_versions[platform] = version_string
             for locale in available:
                 print(f"  {locale}: 現在値を読みました")
