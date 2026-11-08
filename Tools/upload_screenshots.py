@@ -37,7 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from app_store_config import MAX_SCREENSHOTS, bundle_id, languages, parse_list, platform_for
-from app_store_connect import AppStoreConnect
+from app_store_connect import FINAL_DELIVERY_TIMEOUT, AppStoreConnect
 
 
 def screenshots_for(directory: Path) -> list[Path]:
@@ -149,6 +149,8 @@ def main() -> int:
             plan[index] = (target, images, localization_id)
 
     uploaded_total = 0
+    # 取り込みが遅いだけで残りの言語が反映されないことのないよう、待ちきれなかった分は覚えて先へ進み、最後にまとめて待つ
+    pending: dict[str, str] = {}
     for target, images, localization_id in plan:
         if localization_id == "dry-run":
             # --dry-run では言語を作っていないので、App Store Connect に問い合わせる先が無い
@@ -161,9 +163,24 @@ def main() -> int:
 
         screenshot_ids = [client.upload(set_id, image) for image in images]
         client.reorder(set_id, screenshot_ids)
-        client.wait_for_delivery(screenshot_ids)
+        waiting = client.wait_for_delivery(screenshot_ids)
         uploaded_total += len(images)
-        print(f"  {target.language} → {target.store_locale}: {len(images)} 枚")
+        if waiting:
+            pending.update({screenshot_id: target.language for screenshot_id in waiting})
+            print(f"  {target.language} → {target.store_locale}: {len(images)} 枚"
+                  f"（{len(waiting)} 枚は Apple 側の取り込みが終わっていないので、最後にまとめて待ちます）")
+        else:
+            print(f"  {target.language} → {target.store_locale}: {len(images)} 枚")
+
+    if pending:
+        print(f"取り込みが終わっていない {len(pending)} 枚を、最大 {FINAL_DELIVERY_TIMEOUT // 60} 分待ちます")
+        remaining = client.wait_for_delivery(list(pending), timeout=FINAL_DELIVERY_TIMEOUT)
+        if remaining:
+            stuck = ", ".join(sorted({pending[screenshot_id] for screenshot_id in remaining}))
+            raise SystemExit(
+                f"{len(remaining)} 枚の取り込みが終わりませんでした（{stuck}）。"
+                "App Store Connect の画面で状態を確認し、必要ならその言語だけ撮り直してください。"
+            )
 
     print(f"完了: {platform} {version_string} / {len(plan)} 言語 / {uploaded_total} 枚")
     if skipped:
