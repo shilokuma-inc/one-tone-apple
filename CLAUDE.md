@@ -205,7 +205,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 ### クリエイティブアセット（ヘッダー・検索結果の画像）
 
 iOS 27 / iPadOS 27 以降の App Store で、プロダクトページのヘッダーと検索結果に出る画像（[Asset best practices](https://developer.apple.com/app-store/asset-best-practices/)）。
-任意の掲載物で、スクリーンショットとは別に App Asset Library に上げてから、バージョンの言語ごとに配置する。1.3.0 から載せる。
+任意の掲載物で、スクリーンショットとは別に App Asset Library に上げてから、バージョンの言語ごとに配置する。1.2.0 から載せる（iOS のバージョンだけ）。
 
 | もの | 場所 |
 | --- | --- |
