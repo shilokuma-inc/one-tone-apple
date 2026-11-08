@@ -384,8 +384,8 @@ def exported_whats_new(targets: list[Language], current: dict[str, dict[str, dic
     return result, conflicts
 
 
-def read_whats_new(path: Path) -> dict[str, str]:
-    """既にある新機能のファイルの中身（言語 → 文）。無い・読めないときは空。"""
+def read_local_json(path: Path) -> dict:
+    """手元の JSON（新機能のファイルや shared.json）の `_comment` 以外の中身。無い・読めないときは空。"""
     if not path.is_file():
         return {}
     try:
@@ -443,8 +443,15 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
         return 1
 
     shared_source = values[targets[0].store_locale]
-    write_json(directory / SHARED_FILE, exported_shared(shared_source), SHARED_COMMENT)
-    print(f"  {SHARED_FILE}: {json.dumps(exported_shared(shared_source), ensure_ascii=False)}")
+    shared_body = exported_shared(shared_source)
+    if PRIVACY_POLICY_FIELD not in shared_body:
+        # App 情報を読めなかった（または空だった）ときに手元の値まで消すと、必須の項目が抜けて --check で落ちるので残す
+        local = read_local_json(directory / SHARED_FILE).get(PRIVACY_POLICY_FIELD)
+        if local:
+            shared_body[PRIVACY_POLICY_FIELD] = local
+            print(f"  {SHARED_FILE}: {PRIVACY_POLICY_FIELD} は App Store Connect から読めなかったので、手元の値を残します")
+    write_json(directory / SHARED_FILE, shared_body, SHARED_COMMENT)
+    print(f"  {SHARED_FILE}: {json.dumps(shared_body, ensure_ascii=False)}")
     for target in targets:
         body = exported_language(values[target.store_locale])
         write_json(directory / f"{target.language}.json", body, LANGUAGE_COMMENT)
@@ -456,7 +463,7 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
             continue
         path = directory / WHATS_NEW_DIR / f"{version}.json"
         # 言語を絞って書き出したときに、選んでいない言語の文を消さないよう既存のファイルに重ねる
-        merged = {**read_whats_new(path), **texts}
+        merged = {**read_local_json(path), **texts}
         write_json(path, merged, WHATS_NEW_COMMENT)
         kept = len(merged) - len(texts)
         print(f"  {WHATS_NEW_DIR}/{path.name}: {len(texts)} 言語"
@@ -546,7 +553,7 @@ def main() -> int:
     if missing_key:
         raise SystemExit(f"認証情報が足りません: {', '.join(missing_key)}")
 
-    from app_store_connect import AppStoreConnect
+    from app_store_connect import ApiError, AppStoreConnect
 
     # export は読むだけなので、何も書き込まない dry_run として振る舞わせる
     client = AppStoreConnect(
@@ -573,7 +580,7 @@ def main() -> int:
                 locale: {field: entry["attributes"].get(field) or "" for field in APP_INFO_FIELDS}
                 for locale, entry in client.app_info_localizations(info["id"]).items()
             }
-        except SystemExit as error:
+        except (SystemExit, ApiError) as error:
             print(f"アプリ名・プライバシーポリシー URL は書き出しません: {error}")
     elif app_info:
         failures.extend(apply_app_info(
