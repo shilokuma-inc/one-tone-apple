@@ -38,55 +38,61 @@ CONFIG="python3 Tools/app_store_config.py"
 # MARK: - Simulator
 
 SDK_VERSION="$(xcrun --sdk iphonesimulator --show-sdk-version)"
+# プロセス置換の中で失敗しても set -e では止まらないので、先に取り出しておく
+DEVICES="$($CONFIG devices "$DISPLAY_TYPE")"
 
-# ビルドに使う SDK より新しいランタイム（ベータなど）には入れられないので、SDK 以下で一番新しいものを使う
-latest_ios_runtime() {
+# 機種とランタイムの組み合わせを、試す順に「機種名<TAB>機種の ID<TAB>ランタイムの ID」で出す。
+# 機種は AppStore/screenshots.json の devices の順で、同じ機種ならランタイムの新しい順。
+# ビルドに使う SDK より新しいランタイム（ベータなど）には入れられないので SDK 以下に限り、
+# その機種に対応する（supportedDeviceTypes にある）ものだけを使う。新しいランタイムがどの機種でも作れるとは限らない
+# （iOS 27.1 のランタイムは iPhone Duo しか作れない）。SDK 以下の iOS のランタイムが 1 つも無ければ失敗を返す
+simulator_candidates() {
     xcrun simctl list -j runtimes | python3 -c "
 import json, sys
-sdk = [int(part) for part in sys.argv[1].split('.')]
-runtimes = [
-    r for r in json.load(sys.stdin).get('runtimes', [])
-    if r.get('isAvailable') and 'SimRuntime.iOS' in r.get('identifier', '')
-    and [int(part) for part in r['version'].split('.')][:2] <= sdk[:2]
-]
+def version(text):
+    return [int(part) for part in text.split('.')]
+sdk = version(sys.argv[1])
+runtimes = sorted(
+    (
+        r for r in json.load(sys.stdin).get('runtimes', [])
+        if r.get('isAvailable') and 'SimRuntime.iOS' in r.get('identifier', '')
+        and version(r['version'])[:2] <= sdk[:2]
+    ),
+    key=lambda r: version(r['version']),
+    reverse=True,
+)
 if not runtimes:
     sys.exit(1)
-latest = max(runtimes, key=lambda r: [int(part) for part in r['version'].split('.')])
-print(latest['identifier'])
-" "$SDK_VERSION"
+for name in sys.argv[2].splitlines():
+    for runtime in runtimes:
+        for device_type in runtime.get('supportedDeviceTypes', []):
+            if device_type.get('name') == name:
+                print('\t'.join([name, device_type['identifier'], runtime['identifier']]))
+" "$SDK_VERSION" "$DEVICES"
 }
 
-device_type_id_for_name() {
-    xcrun simctl list -j devicetypes | python3 -c "
-import json, sys
-for item in json.load(sys.stdin).get('devicetypes', []):
-    if item.get('name') == sys.argv[1]:
-        print(item['identifier'])
-        sys.exit(0)
-sys.exit(1)
-" "$1"
-}
-
-if ! RUNTIME_ID="$(latest_ios_runtime)"; then
+if ! CANDIDATES="$(simulator_candidates)"; then
     echo "iOS Simulator のランタイムが見つからないためダウンロードします"
     xcodebuild -downloadPlatform iOS
-    RUNTIME_ID="$(latest_ios_runtime)"
+    CANDIDATES="$(simulator_candidates)"
 fi
-echo "ランタイム: ${RUNTIME_ID}（SDK ${SDK_VERSION}）"
 
 UDID=""
 DEVICE_NAME=""
-while IFS= read -r -u 3 candidate; do
-    if DEVICE_TYPE_ID="$(device_type_id_for_name "$candidate")" \
-        && UDID="$(xcrun simctl create "OneTone-Screenshot-$DISPLAY_TYPE" "$DEVICE_TYPE_ID" "$RUNTIME_ID" 2>/dev/null)"; then
+RUNTIME_ID=""
+while IFS=$'\t' read -r -u 3 candidate device_type_id runtime_id; do
+    [ -n "$candidate" ] || continue
+    if UDID="$(xcrun simctl create "OneTone-Screenshot-$DISPLAY_TYPE" "$device_type_id" "$runtime_id" 2>/dev/null)"; then
         DEVICE_NAME="$candidate"
+        RUNTIME_ID="$runtime_id"
         break
     fi
     UDID=""
-done 3< <($CONFIG devices "$DISPLAY_TYPE")
+done 3< <(printf '%s\n' "$CANDIDATES")
 
 if [ -z "$UDID" ]; then
-    echo "$DISPLAY_TYPE 向けの Simulator を作れませんでした。AppStore/screenshots.json の devices を見直してください。" >&2
+    echo "$DISPLAY_TYPE 向けの Simulator を作れませんでした。AppStore/screenshots.json の devices と、その機種に対応するランタイム（SDK ${SDK_VERSION} 以下）が入っているかを見直してください。" >&2
+    xcrun simctl list runtimes >&2 || true
     xcrun simctl list devicetypes >&2 || true
     exit 1
 fi
@@ -100,7 +106,7 @@ cleanup() {
 FINISHED=0
 trap 'status=$?; if [ "$status" -eq 0 ] && [ "$FINISHED" -ne 1 ]; then status=1; fi; cleanup; exit "$status"' EXIT
 
-echo "機種: $DEVICE_NAME ($UDID)"
+echo "機種: $DEVICE_NAME ($UDID)、ランタイム: ${RUNTIME_ID}（SDK ${SDK_VERSION}）"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b >/dev/null
 
