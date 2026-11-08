@@ -17,6 +17,9 @@
 ## iOS のスクリーンショット撮影（Tools/capture_screenshots.sh）
 
 - `simctl terminate` の直後に `simctl launch` すると、アプリが出る前のホーム画面を「連続 2 枚が一致した」として撮ってしまうことがある。終了と起動の間に数秒空ける（`RELAUNCH_INTERVAL`）（2026-10-05）
+- Simulator のランタイムは、新しいものがどの機種でも作れるとは限らない。iOS 27.1 のランタイム（Xcode 27.1 の SDK と一緒に入るもの）は iPhone Duo しか作れず、iPhone 17 Pro Max などは `simctl create` が `Incompatible device` で失敗する。
+  対応機種は `xcrun simctl list runtimes -j` の `supportedDeviceTypes` で見られる。スクリプトは SDK 以下のランタイムのうち `AppStore/screenshots.json` の devices に対応するものから、機種の順 → ランタイムの新しい順に選ぶ（iOS 27.1 の入った Mac では iOS 27.0 で撮る）。
+  `向けの Simulator を作れませんでした` で止まったら、その機種に対応するランタイムを入れるか devices を見直す（2026-11-08）
 
 ## ローカルビルド
 
