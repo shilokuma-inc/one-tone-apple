@@ -176,6 +176,7 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 | `Screenshots/App Store` | スクリーンショット（iPhone 6.9 inch / iPad 13 inch → iOS、Mac → macOS。言語は `AppStore/languages.json` の 12 言語。主言語は ja） | `AppStore/screenshots.json` / `AppStore/languages.json` |
 | `Metadata/App Store` | 説明文・キーワード・プロモーションテキスト・URL・新機能・審査メモ（`mode`: dry-run（既定）/ upload / export、`platform`: both / ios / macos） | `AppStore/metadata/*.json` / `whats_new/<バージョン>.json` / `review_notes.txt` |
 | `Verify/App Store metadata` | PR で metadata の欠損・文字数超過と撮影設定の整合を検査 | 同上 |
+| `Creative assets/App Store` | プロダクトページのヘッダーと検索結果のクリエイティブアセット（iOS のバージョンだけ。`mode`: dry-run（既定）/ upload / ref-data） | `AppStore/creative_assets.json` / `AppStore/creative/<言語>/` |
 
 - 撮影はアプリの撮影モード（起動引数 `-screenshot-demo -screenshot-scene <名前>`、`OneTone/ScreenshotDemo.swift`）で行う。
   音は出さず表示だけ再生中にし（`AudioManager.presentAsPlaying`）、止まらないアニメーションは `\.freezesAnimations` で止める
@@ -200,6 +201,32 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
 - 認証は Organization secrets の App Store Connect API Key（`APPLE_API_KEY_*`）。手元に .p8 は無いので、App Store Connect の状態確認は CI の dry-run で行う
 - PR 本文のスクリーンショットは `gh pr create --attach`（gh v2.99.0 以上）で添付する（assets ブランチは使わない）。本文は Markdown の表に `![Before](./before.png)` の形で書き、
   作成後に `<img width="300">` に置き換える（手順は shilokuma-inc/template-app-ios の README の「PR 本文のスクリーンショット」）
+
+### クリエイティブアセット（ヘッダー・検索結果の画像）
+
+iOS 27 / iPadOS 27 以降の App Store で、プロダクトページのヘッダーと検索結果に出る画像（[Asset best practices](https://developer.apple.com/app-store/asset-best-practices/)）。
+任意の掲載物で、スクリーンショットとは別に App Asset Library に上げてから、バージョンの言語ごとに配置する。1.3.0 から載せる。
+
+| もの | 場所 |
+| --- | --- |
+| 置き場所・寸法・配置する platform | `AppStore/creative_assets.json`（ヘッダー 21:9 = 3840x1646、検索結果 3:2 = 3840x2560。どちらも透過なし） |
+| 画像（12 言語） | `AppStore/creative/<言語>/header.png` / `search_results.png` |
+| 画像の元（文言も言語ごとにここ） | `AppStore/creative/src/creative.html` |
+| 書き出し / 反映 | `Tools/render_creative_assets.sh` / `Tools/upload_creative_assets.py` |
+
+- 画像は手で描かず、HTML から書き出す。先に `Tools/capture_screenshots.sh APP_IPHONE_67` で iPhone 6.9 inch の画面を撮り（画面の画像に使う）、
+  `Tools/render_creative_assets.sh [言語,…]` を流すと Chrome のヘッドレスで実寸に撮ってアルファを落とし、寸法と透過を `--check` で確かめる。画像もコミットする。
+  アプリの画面・ロゴ・テーマの色を変えたら書き出し直す（ロゴは同梱の Audiowide と `AppIcon.icon` のレイヤーをそのまま使う）
+- 文言は `creative.html` の `copy` に 12 言語ぶん書く（ヘッダーの一言・検索結果の見出し・主な機能 3 つ）。音名・コード名・NOTE / CHORD・波形名・Hz は英語のまま（「訳さない文言」）。
+  言語を足したら `copy` にも足す（無いと書き出しが止まる）。長い言語は幅に収まるまで自動で文字を縮める
+- ヘッダーは端末や向きによって左右が切れ、下側にはアプリ名などが重なりうる（切れ方の数値は公開されていない）。ロゴと文言は中央に寄せ、下側には飾りだけを置く。
+  App Store Connect のプレビューで iPhone / iPad・縦横の見え方を確かめる
+- 配置するのは iOS のバージョンだけ（`creative_assets.json` の `platforms`）。Apple の説明では iOS / iPadOS の App Store にだけ出る。
+  App Asset Library の参照データの置き場所（`DEFAULT_PROFILE`）は platform を区別しない（`ANY`）ので、macOS に載るようになったら `MAC_OS` を足す
+- 置き場所のグループと画像の仕様は決め打ちせず、参照データから引く（`mode: ref-data` で見られる）。上げた画像は配置から外しても Asset Library に残る
+- 配置したアセットはそのバージョンと一緒に審査に出る。リリースでは App Store Connect に X.Y.Z のバージョンを作ったあと、審査に出す前に
+  `release/vX.Y.Z` で `Creative assets/App Store` を `app_version: X.Y.Z` で dry-run → upload する（App Store Connect に無い言語は先に `Metadata/App Store` の `missing_locales: create` で足す）
+- PR では `Verify/App Store metadata` が `python3 Tools/upload_creative_assets.py --check` で、12 言語の画像の有無・寸法・透過を確かめる
 
 ## ralph-loop による自律開発
 
