@@ -5,7 +5,7 @@ iOS 27 / iPadOS 27 から、スクリーンショットとは別に「クリエ�
 （https://developer.apple.com/app-store/asset-best-practices/）。置き場所・寸法・配置する platform は
 `AppStore/creative_assets.json`、画像は `AppStore/creative/<言語>/<ファイル名>`。
 
-    python3 Tools/upload_creative_assets.py               # 全言語を反映する
+    python3 Tools/upload_creative_assets.py --app-version 1.3.0  # 全言語を 1.3.0 に反映する
     python3 Tools/upload_creative_assets.py --dry-run     # 何も書き換えず、やることだけ出す
     python3 Tools/upload_creative_assets.py --ref-data    # 置き場所と画像の仕様を App Store Connect から読んで出す
     python3 Tools/upload_creative_assets.py --check       # App Store Connect につながず、手元の画像だけ検査する
@@ -24,6 +24,7 @@ platform ごとに別物。クリエイティブアセットは iOS / iPadOS の
 `creative_assets.json` の platforms（IOS）のバージョンにだけ配置する。
 
 触るのは **編集できる状態のバージョンだけ**。配置したアセットは、そのバージョンと一緒に審査に出る。
+そのため反映（upload）では `--app-version` を必ず指定する（自動で選ぶと、審査に出す直前の別のバージョンに入りうる）。
 外した配置の画像は Asset Library に残る。
 
 認証は App Store Connect API Key（.p8）。次の環境変数でも渡せる。
@@ -320,7 +321,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--bundle-id", help="省略すると project.pbxproj から読む")
     parser.add_argument("--languages", help="対象の言語（カンマ区切り）。省略すると全言語")
-    parser.add_argument("--app-version", help="反映先のバージョン。省略すると編集できるバージョンを自動で選ぶ")
+    parser.add_argument("--app-version",
+                        help="反映先のバージョン（例: 1.3.0）。反映では必須。--dry-run で省略すると編集できるバージョンを自動で選ぶ")
     parser.add_argument("--key-id", default=os.environ.get("APP_STORE_CONNECT_KEY_ID"))
     parser.add_argument("--issuer-id", default=os.environ.get("APP_STORE_CONNECT_ISSUER_ID"))
     parser.add_argument(
@@ -334,6 +336,11 @@ def main() -> int:
     mode.add_argument("--ref-data", action="store_true", help="置き場所と画像の仕様を出して終わる")
     mode.add_argument("--check", action="store_true", help="App Store Connect につながず、手元の画像だけ検査する")
     args = parser.parse_args()
+    if not (args.dry_run or args.ref_data or args.check) and not args.app_version:
+        raise SystemExit(
+            "反映では --app-version で反映先のバージョンを指定してください（例: --app-version 1.3.0）。"
+            "配置したアセットはそのバージョンと一緒に審査に出るため、自動では選びません。"
+        )
 
     assets = creative_assets()
     target_platforms = creative_platforms()

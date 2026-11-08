@@ -8,7 +8,8 @@ name: Creative assets/App Store
 # iOS / iPadOS の App Store にだけ出るので、iOS のバージョンにだけ配置する（macOS のバージョンには置かない）。
 #
 # 反映先は「編集できる状態のバージョン」だけ。審査中・配信済みのバージョンには触らない。
-# 配置したアセットはそのバージョンと一緒に審査に出るので、審査に出す前のバージョンを app_version で指定する。
+# 配置したアセットはそのバージョンと一緒に審査に出るので、upload では反映先のバージョンを app_version で必ず指定する
+# （空だと止まる。自動で選ぶと、審査に出す直前の別のバージョンに入りうるため）。
 # mode:
 #   dry-run  … 配置の予定（反映先のバージョン・言語・仕様・グループ・外す既存の配置の数）だけ出す（既定）
 #   upload   … 反映する
@@ -30,7 +31,7 @@ on:
         required: false
         default: ''
       app_version:
-        description: '反映先のバージョン。空なら編集できるバージョンを自動で選ぶ'
+        description: '反映先のバージョン（例: 1.3.0）。upload では必須。dry-run で空なら編集できるバージョンを自動で選ぶ'
         required: false
         default: ''
 

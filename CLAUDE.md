@@ -225,7 +225,7 @@ iOS 27 / iPadOS 27 以降の App Store で、プロダクトページのヘッ�
   App Asset Library の参照データの置き場所（`DEFAULT_PROFILE`）は platform を区別しない（`ANY`）ので、macOS に載るようになったら `MAC_OS` を足す
 - 置き場所のグループと画像の仕様は決め打ちせず、参照データから引く（`mode: ref-data` で見られる）。上げた画像は配置から外しても Asset Library に残る
 - 配置したアセットはそのバージョンと一緒に審査に出る。リリースでは App Store Connect に X.Y.Z のバージョンを作ったあと、審査に出す前に
-  `release/vX.Y.Z` で `Creative assets/App Store` を `app_version: X.Y.Z` で dry-run → upload する（App Store Connect に無い言語は先に `Metadata/App Store` の `missing_locales: create` で足す）
+  `release/vX.Y.Z` で `Creative assets/App Store` を `app_version: X.Y.Z` で dry-run → upload する（upload は `app_version` が空だと止まる。App Store Connect に無い言語は先に `Metadata/App Store` の `missing_locales: create` で足す）
 - PR では `Verify/App Store metadata` が `python3 Tools/upload_creative_assets.py --check` で、12 言語の画像の有無・寸法・透過を確かめる
 
 ## ralph-loop による自律開発
