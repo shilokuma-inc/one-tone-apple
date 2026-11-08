@@ -267,6 +267,48 @@ def write_json(path: Path, body: dict, default_comment: list[str]) -> None:
     path.write_text(json.dumps({"_comment": comment, **body}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def exported_whats_new(targets: list[Language], current: dict[str, dict[str, dict]],
+                       versions: dict[str, str]) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """platform ごとの現在値から、バージョン → 言語 → 新機能の文を組み立てる。
+
+    新機能の文はバージョンごとに別物なので、platform の間では同じバージョン同士だけを比べ、
+    食い違いがあればその差分を返す。
+    """
+    result: dict[str, dict[str, str]] = {}
+    owners: dict[str, str] = {}
+    conflicts: list[str] = []
+    for platform, locales in current.items():
+        version = versions[platform]
+        texts = {
+            target.language: locales[target.store_locale]["whatsNew"]
+            for target in targets if (locales.get(target.store_locale) or {}).get("whatsNew")
+        }
+        if version not in result:
+            result[version] = texts
+            owners[version] = platform
+            continue
+        keys = sorted(set(result[version]) | set(texts))
+        lines = describe_changes({key: result[version].get(key, "") for key in keys},
+                                 {key: texts.get(key, "") for key in keys})
+        if lines:
+            conflicts.append(f"  新機能 {version}: {owners[version]} と {platform} で値が違います")
+            conflicts.extend(lines)
+    return result, conflicts
+
+
+def read_whats_new(path: Path) -> dict[str, str]:
+    """既にある新機能のファイルの中身（言語 → 文）。無い・読めないときは空。"""
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {key: value for key, value in raw.items() if key != "_comment"}
+
+
 def export(directory: Path, targets: list[Language], current: dict[str, dict[str, dict]],
            review_notes: dict[str, str], versions: dict[str, str]) -> int:
     """platform ごとの現在値（platform → store_locale → attributes）を AppStore/metadata に書き出す。
@@ -290,7 +332,7 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
             after = current[other].get(target.store_locale, {})
             lines = describe_changes(before, {
                 field: after.get(field) or ""
-                for field in ("description", "keywords", "promotionalText", "supportUrl", "marketingUrl", "whatsNew")
+                for field in ("description", "keywords", "promotionalText", "supportUrl", "marketingUrl")
             })
             if lines:
                 conflicts.append(f"  {target.store_locale}: {first} と {other} で値が違います")
@@ -299,6 +341,8 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
         if lines:
             conflicts.append(f"  審査メモ: {first} と {other} で値が違います")
             conflicts.extend(lines)
+    whats_new, whats_new_conflicts = exported_whats_new(targets, current, versions)
+    conflicts.extend(whats_new_conflicts)
     if conflicts:
         print("platform の間で現在値が食い違っているため書き出しません。--platform で片方を選んでください。")
         print("\n".join(conflicts))
@@ -319,14 +363,16 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
         print(f"  {target.language}.json（{target.store_locale}）:")
         for line in json.dumps(body, ensure_ascii=False, indent=2).splitlines():
             print(f"    {line}")
-    whats_new = {
-        target.language: values[target.store_locale]["whatsNew"]
-        for target in targets if values[target.store_locale].get("whatsNew")
-    }
-    if whats_new:
-        path = directory / WHATS_NEW_DIR / f"{versions[first]}.json"
-        write_json(path, whats_new, WHATS_NEW_COMMENT)
-        print(f"  {WHATS_NEW_DIR}/{path.name}: {len(whats_new)} 言語")
+    for version, texts in whats_new.items():
+        if not texts:
+            continue
+        path = directory / WHATS_NEW_DIR / f"{version}.json"
+        # 言語を絞って書き出したときに、選んでいない言語の文を消さないよう既存のファイルに重ねる
+        merged = {**read_whats_new(path), **texts}
+        write_json(path, merged, WHATS_NEW_COMMENT)
+        kept = len(merged) - len(texts)
+        print(f"  {WHATS_NEW_DIR}/{path.name}: {len(texts)} 言語"
+              + (f"（ほかの {kept} 言語は手元の値を残しました）" if kept else ""))
     if review_notes.get(first):
         (directory / REVIEW_NOTES_FILE).write_text(review_notes[first] + "\n", encoding="utf-8")
         print(f"  {REVIEW_NOTES_FILE}: {len(review_notes[first])} 字")
