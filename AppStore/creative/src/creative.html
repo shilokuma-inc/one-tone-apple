@@ -161,12 +161,31 @@
   let serial = 0;
   const ids = (...names) => { serial += 1; return Object.fromEntries(names.map((n) => [n, `${n}${serial}`])); };
 
-  // アイコンの図柄（AppIcon.icon のレイヤー）を、外接矩形（AppIconDesign.Geometry.markBounds × 1024）で切り出す
-  const markViewBox = "143.36 209.92 737.28 604.16";
+  // アイコンの図柄（AppIcon.icon のレイヤー）を、背景を除いた外接矩形で切り出す（アプリの LogoMark と同じ）。
+  // 外接矩形は数値で持たず、レイヤーの SVG を読んで測る（アイコンの図柄を変えても、ここを直さずに済むように）
+  const markLayers = ["bowl", "bars", "bar-center"];
+  let markViewBox = "";
+  const measureMark = () => Promise.all(markLayers.map((name) => new Promise((resolve, reject) => {
+    // file:// は fetch で読めないので XHR で読む（render_creative_assets.sh が --allow-file-access-from-files で開く）
+    const request = new XMLHttpRequest();
+    request.open("GET", `mark/${name}.svg`);
+    request.onload = () => resolve(request.responseText);
+    request.onerror = () => reject(new Error(`mark/${name}.svg を読めませんでした`));
+    request.send();
+  }))).then((sources) => {
+    const probe = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    probe.setAttribute("style", "position:absolute;visibility:hidden");
+    probe.innerHTML = sources.map((source) => new DOMParser().parseFromString(source, "image/svg+xml")
+      .documentElement.innerHTML).join("");
+    document.body.appendChild(probe);
+    const box = probe.getBBox();
+    probe.remove();
+    markViewBox = `${box.x} ${box.y} ${box.width} ${box.height}`;
+  });
   const logo = (size, style, parent = canvas) => add(
     `<div class="logo" style="font-size:${size}px;${style}">` +
     `<svg viewBox="${markViewBox}">` +
-    ["bowl", "bars", "bar-center"].map((n) => `<image href="mark/${n}.svg" width="1024" height="1024"/>`).join("") +
+    markLayers.map((n) => `<image href="mark/${n}.svg" width="1024" height="1024"/>`).join("") +
     `</svg><span class="wordmark">One Tone</span></div>`, parent);
 
   // 言語によって文言の長さが違うので、幅に収まるまで文字を小さくする（折り返さない）
@@ -270,7 +289,7 @@
 
   const titleGradient = [[0, "#00ff99"], [0.5, "#00e5ff"], [1, "#0066ff"]];
 
-  document.fonts.load("100px Audiowide").then(() => {
+  Promise.all([document.fonts.load("100px Audiowide"), measureMark()]).then(() => {
     if (type === "header") {
       // 21:9。ロゴを中央に置き、ロゴから左右へ澄んだ音（正弦波）が伸びる
       const cy = H * 0.42;
