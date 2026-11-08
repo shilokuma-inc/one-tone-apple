@@ -28,7 +28,8 @@ App Store のアプリ名は言語ごとに重複を判定され、言語を追�
     APP_STORE_CONNECT_KEY_ID / APP_STORE_CONNECT_ISSUER_ID / APP_STORE_CONNECT_PRIVATE_KEY_PATH
 
 触るのは **編集できる状態のバージョンだけ**。審査中や配信済みのバージョンは対象にしない。
-JSON に書いていない項目（例: 省略した promotionalText）は App Store Connect 側の値をそのまま残す。
+JSON に書いていない任意の項目（例: 省略した name）は App Store Connect 側の値をそのまま残す。
+promotionalText と marketingUrl は入れ忘れても App Store Connect 側で気づきにくいので必須にしている。
 
 PyJWT が要る（--check では不要）: `python3 -m pip install pyjwt cryptography`
 """
@@ -77,11 +78,11 @@ WHATS_NEW_LIMIT = 4000
 SHARED_COMMENT = [
     "言語によらず同じ値を使う App Store のメタデータ。iOS / macOS の両バージョンに同じ値を書き込む。",
     "supportUrl は Apple の審査で実際に開かれるので、必ず到達できる URL にすること。",
-    "marketingUrl は任意。消すと App Store Connect 側の値をそのまま残す。",
+    "marketingUrl も必須。無いと --check（PR の検査）で落ちる。",
 ]
 LANGUAGE_COMMENT = [
     "App Store の説明文など。上限: description 4000 字 / keywords 合計 100 字（カンマ込み）/ promotionalText 170 字。",
-    "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
+    "promotionalText は必須（説明文の上に出る短い文。審査なしで差し替えられる）。無いと --check（PR の検査）で落ちる。",
     "name（アプリ名。上限 30 字）も省略できる。主言語の名前を別のアプリが使っている言語は、ここで別の名前にする。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。",
 ]
@@ -98,8 +99,8 @@ def load_shared(directory: Path) -> tuple[dict[str, str], list[str]]:
     raw = json.loads(path.read_text(encoding="utf-8"))
     problems = []
     attributes = {}
-    # supportUrl は審査で実際に開かれるので必須。marketingUrl は任意
-    for key, required in (("supportUrl", True), ("marketingUrl", False)):
+    # supportUrl は審査で実際に開かれるので必須。marketingUrl も入れ忘れに気づきにくいので必須にする
+    for key, required in (("supportUrl", True), ("marketingUrl", True)):
         value = raw.get(key)
         if isinstance(value, str) and value.strip():
             if not value.startswith("https://"):
@@ -251,12 +252,12 @@ def load(directory: Path, target: Language, shared: dict[str, str]) -> tuple[dic
     else:
         problems.append(f"{path}: keywords がありません（配列で書く）")
 
+    # 省略すると App Store Connect 側の空のままになっても気づけないので必須にする
     promotional_text = raw.get("promotionalText")
-    if promotional_text is not None:
-        if isinstance(promotional_text, str) and promotional_text.strip():
-            attributes["promotionalText"] = promotional_text
-        else:
-            problems.append(f"{path}: promotionalText が空です（使わないなら項目ごと消す）")
+    if isinstance(promotional_text, str) and promotional_text.strip():
+        attributes["promotionalText"] = promotional_text
+    else:
+        problems.append(f"{path}: promotionalText がありません")
 
     for field, limit in LIMITS.items():
         value = attributes.get(field, "")

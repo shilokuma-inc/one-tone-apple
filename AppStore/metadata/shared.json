@@ -2,7 +2,7 @@
   "_comment": [
     "言語によらず同じ値を使う App Store のメタデータ。iOS / macOS の両バージョンに同じ値を書き込む。",
     "supportUrl は Apple の審査で実際に開かれるので、必ず到達できる URL にすること。",
-    "marketingUrl は任意。消すと App Store Connect 側の値をそのまま残す。"
+    "marketingUrl も必須。無いと --check（PR の検査）で落ちる。"
   ],
   "supportUrl": "https://docs.google.com/forms/d/e/1FAIpQLSc4DiUAcjKlrchuefXxehD-BgCEhGVomX6NOwtijWiE0yJAlQ/viewform",
   "marketingUrl": "https://shilokuma.jp"

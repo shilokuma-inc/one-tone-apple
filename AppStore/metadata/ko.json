@@ -1,7 +1,7 @@
 {
   "_comment": [
     "App Store の説明文など。上限: description 4000 字 / keywords 合計 100 字（カンマ込み）/ promotionalText 170 字。",
-    "promotionalText は省略できる（省略すると App Store Connect 側の値をそのまま残す）。",
+    "promotionalText は必須（説明文の上に出る短い文。審査なしで差し替えられる）。無いと --check（PR の検査）で落ちる。",
     "初期値は Tools/upload_metadata.py --export で App Store Connect の現在値を取り込んだもの。"
   ],
   "promotionalText": "20Hz~20,000Hz의 소리 하나만을 재생하는 심플한 톤 제너레이터. A4나 C#5 같은 음이름, C·G·Am 같은 화음으로도 재생할 수 있습니다. 작업 집중, 악기 튜닝, 스피커 점검에.",
