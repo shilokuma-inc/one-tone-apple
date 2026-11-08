@@ -90,6 +90,8 @@
 - `appStoreVersionLocalizations` を POST して言語を足すと、その言語のアプリ名（`appInfoLocalizations`）が主言語の名前で自動で作られる。その名前を別のアカウントのアプリがその言語で使っていると、409 `STATE_ERROR.DUPLICATE_NAME.DIFFERENT_ACCOUNT`（Cannot add localization due to app name）で拒否される。重複の判定は言語ごとで、「One Tone」は ja と 9 言語では通り、en-US と zh-Hans だけ拒否された。先に `appInfoLocalizations` を別の名前で POST してから説明文の言語を足す（2026-11-08）
 - 1.2.0 のバージョンを作った時点で、iOS 側には 1.1.0 の審査メモが引き継がれていたが、macOS 側の審査メモ（`appStoreReviewDetail`）は空だった。審査メモは platform ごとに dry-run の差分で確かめる（2026-11-08）
 - スクリーンショットの Apple 側の取り込み（`assetDeliveryState` が `COMPLETE` になるまで）は、ふだんは数十秒だが、遅い時間帯は 1 枚に 5 分以上かかり、Mac / iPhone / iPad のジョブが続けて 300 秒の待ちを超えた（2026-11-08 の 06:30〜07:00 UTC）。言語ごとの待ちで止めると残りの言語が反映されないので、`upload_screenshots.py` は待ちきれなかった分を最後にまとめて待つ（2026-11-08）
+- `appInfoLocalizations` を API で名前だけ指定して作ると、プライバシーポリシー URL（`privacyPolicyUrl`）が空のまま作られ、審査に出すときに「中国語（簡体字） - プライバシーポリシーURL - このフィールドは必須です」で止まる。説明文の言語の追加で App Store Connect が自動で作った App 情報には主言語の URL が入っていた。作るときに `privacyPolicyUrl` も一緒に渡す（2026-11-08）
+- App 情報（`appInfos`）は iOS / macOS で共通で、片方の platform（今回は iOS）を審査に出すと `WAITING_FOR_REVIEW` になり、もう片方（macOS）が準備中でも書き換えられない。App 情報の不足は、両方を審査に出す前に直す（2026-11-08）
 
 ## アプリアイコン（Tools/draw_app_icon.swift）
 
