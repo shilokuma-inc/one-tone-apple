@@ -208,6 +208,52 @@ class AppStoreConnect:
         )
         return response["data"]["id"]
 
+    # MARK: App 情報（言語ごとのアプリ名）
+
+    def editable_app_info(self, app_id: str) -> dict:
+        """編集できる状態の `appInfos` を 1 つ選ぶ。
+
+        アプリ名は言語ごとに App 情報（`appInfoLocalizations`）にあり、iOS / macOS で共通。
+        配信中のもの（READY_FOR_DISTRIBUTION）とは別に、次のバージョンの準備中だけ編集できるものがある。
+        """
+        infos = self.get_all(f"/v1/apps/{app_id}/appInfos", {"limit": 50})
+        editable = [info for info in infos if app_info_state(info) in EDITABLE_STATES]
+        if len(editable) != 1:
+            states = ", ".join(sorted(app_info_state(info) for info in infos))
+            raise SystemExit(
+                f"編集できる App 情報が {len(editable)} 件あります（いまある状態: {states or 'なし'}）。"
+                "App Store Connect で次のバージョンを作ってから実行してください。"
+            )
+        return editable[0]
+
+    def app_info_localizations(self, app_info_id: str) -> dict[str, dict]:
+        """ロケール → そのロケールの `appInfoLocalizations`（アプリ名などの現在値を含む）。"""
+        entries = self.get_all(f"/v1/appInfos/{app_info_id}/appInfoLocalizations", {"limit": 50})
+        return {entry["attributes"]["locale"]: entry for entry in entries}
+
+    def create_app_info_localization(self, app_info_id: str, locale: str, attributes: dict) -> str:
+        """App 情報に言語を追加する。
+
+        説明文の言語（`create_localization`）を先に追加すると、アプリ名に主言語の名前が使われ、
+        その名前が別のアプリに使われている言語では 409（STATE_ERROR.DUPLICATE_NAME）で拒否される。
+        別の名前にする言語は、ここで名前を指定して先に作っておく。
+        """
+        if self.dry_run:
+            return "dry-run"
+        response = self.post(
+            "/v1/appInfoLocalizations",
+            {
+                "data": {
+                    "type": "appInfoLocalizations",
+                    "attributes": {**attributes, "locale": locale},
+                    "relationships": {
+                        "appInfo": {"data": {"type": "appInfos", "id": app_info_id}}
+                    },
+                }
+            },
+        )
+        return response["data"]["id"]
+
     # MARK: 審査情報（App Review Information）
 
     def review_detail(self, version_id: str) -> dict | None:
@@ -354,6 +400,12 @@ class AppStoreConnect:
                 f"{len(pending)} 枚の取り込みが {DELIVERY_TIMEOUT} 秒で終わりませんでした。"
                 "App Store Connect の画面で状態を確認してください。"
             )
+
+
+def app_info_state(info: dict) -> str:
+    """App 情報の状態。`appStoreState` は非推奨になり `state` に移ったので、新しい方を優先して読む。"""
+    attributes = info.get("attributes", {})
+    return attributes.get("state") or attributes.get("appStoreState") or ""
 
 
 def make_token(key_id: str, issuer_id: str, private_key: str) -> str:
