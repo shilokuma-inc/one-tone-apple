@@ -191,6 +191,8 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
   Job Summary / artifact の JSON を `AppStore/metadata/` に取り込んでから `dry-run` で差分ゼロを確かめる。手元の検査は `python3 Tools/upload_metadata.py --check`
 - 「このバージョンの新機能」（whatsNew）は `AppStore/metadata/whats_new/<バージョン>.json` に全言語ぶん書く。反映先のバージョン名と一致するファイルだけが書き込まれ、
   無いバージョンでは App Store Connect 側の値を残す（前の版の文が次の版に載らないよう、言語ごとの JSON には持たない）
+- プロモーションテキスト（`<言語>.json` の `promotionalText`。上限 170 字）とマーケティング URL（`shared.json` の `marketingUrl`。`https://shilokuma.jp`）は必須。
+  書かないと App Store Connect 側の空のままでも気づけないので、`--check`（PR の `Verify/App Store metadata`）で落とす
 - アプリ名は言語ごとに `<言語>.json` の `name`（任意。上限 30 字）。App 情報（iOS / macOS で共通）に書き込み、書いていない言語は App Store Connect 側の値を残す。
   App Store のアプリ名は言語ごとに重複を判定され、言語を足すと主言語の「One Tone」が使われる。en-US と zh-Hans は「One Tone」が別のアプリに使われているため、
   `name` で別の名前（「One Tone: Tone Generator」「One Tone: 音调发生器」）にしている。言語を足して 409（`STATE_ERROR.DUPLICATE_NAME.DIFFERENT_ACCOUNT`）になったら、その言語に `name` を書く
