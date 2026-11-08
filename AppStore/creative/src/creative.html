@@ -1,0 +1,339 @@
+<!doctype html>
+<!--
+  App Store のクリエイティブアセット（プロダクトページのヘッダー / 検索結果）の元。
+  Tools/render_creative_assets.sh が素材（ロゴの書体・マーク・画面）と一緒に作業フォルダへ写し、Chrome で開いて書き出す。
+  直接開くときは creative.html?type=header&lang=ja のように指定する（同じフォルダに render_creative_assets.sh が写す素材が要る）。
+
+  方針（https://developer.apple.com/app-store/asset-best-practices/）
+  - ヘッダー: 初めて来た人向けに 1 つのことだけを伝える。ロゴから澄んだ音（正弦波）が左右に伸びる絵に、短い一言を添える。
+    端末や向きによって左右が切れ、下側にはアプリ名などが重なりうるので、ロゴと文言は中央に寄せ、下側には飾りだけを置く。
+  - 検索結果: 何のアプリかを一目でわかるように、見出し・主な機能と、実際の画面を見せる。
+  - アプリのネオン・黒基調（OneTone/Theme.swift。既定のテーマのシアン）とロゴ（Audiowide。OneTone/TitleView.swift）に合わせる。
+  - 他社のロゴ・価格・受賞歴は入れない。文言は短く、言語ごとに訳す。
+    音名・コード名・NOTE / CHORD・波形名・単位記号（Hz）は、アプリと同じく全言語で英語のまま（CLAUDE.md の「訳さない文言」）。
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* ロゴの書体は同梱の Audiowide（SIL OFL 1.1）を改変せずに使う */
+  @font-face { font-family: "Audiowide"; src: url("Audiowide-Regular.ttf") format("truetype"); }
+
+  :root {
+    /* Theme.swift の値 */
+    --background: #0a0a0f;
+    --surface: #16161f;
+    --surface-raised: #22222e;
+    --text-primary: #f2f2f7;
+    --text-secondary: #a6a6b8;
+    /* ThemeColor.cyan（既定のテーマ）の accent と titleGradient */
+    --accent: #00e5ff;
+    --title-1: #00ff99;
+    --title-2: #00e5ff;
+    --title-3: #0066ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: var(--background);
+    color: var(--text-primary);
+    font-family: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body[data-lang="ja"] { font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif; }
+  body[data-lang="zh-Hans"] { font-family: "PingFang SC", sans-serif; }
+  body[data-lang="zh-Hant"] { font-family: "PingFang TC", sans-serif; }
+  body[data-lang="ko"] { font-family: "Apple SD Gothic Neo", sans-serif; }
+
+  .canvas { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--background); }
+  .layer { position: absolute; inset: 0; }
+
+  /* ロゴ（LogoLockup）: マークが左、文字が右。マークの高さは文字の 0.95 倍、間隔は 0.25 倍（Theme.Logo） */
+  .logo { position: absolute; display: flex; align-items: center; gap: 0.25em; line-height: 1; white-space: nowrap;
+    filter: drop-shadow(0 0 0.18em rgba(0, 229, 255, 0.55)) drop-shadow(0 0 0.5em rgba(0, 229, 255, 0.25)); }
+  .logo svg { height: 0.95em; display: block; overflow: visible; }
+  .logo .wordmark { font-family: "Audiowide"; font-weight: 400;
+    background: linear-gradient(90deg, var(--title-1), var(--title-2), var(--title-3));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .phrase { position: absolute; left: 0; right: 0; text-align: center; font-weight: 600; letter-spacing: 0.01em;
+    white-space: nowrap; color: var(--text-primary); text-shadow: 0 0 40px rgba(0, 0, 0, 0.9); }
+  .phrase span { display: inline-block; }
+
+  .copy { position: absolute; white-space: nowrap; }
+  .copy .logo { position: relative; }
+  .copy .title { font-weight: 800; line-height: 1.16; letter-spacing: -0.005em; }
+  .features { display: flex; flex-direction: column; gap: 0.5em; }
+  .feature { display: flex; align-items: center; gap: 0.6em; font-weight: 700; color: var(--text-primary); }
+  .feature i { flex: none; display: grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 0.36em;
+    background: var(--surface-raised); box-shadow: inset 0 0 0 4px var(--accent), 0 0 0.5em rgba(0, 229, 255, 0.35); }
+  .feature i svg { width: 64%; height: 64%; overflow: visible; }
+
+  .phone { position: absolute; border-radius: 9.5%/4.4%; background: #050507; padding: 1.5%;
+    box-shadow: 0 0 0 5px #2c2c38, 0 70px 160px rgba(0, 0, 0, 0.75); }
+  .phone img { display: block; width: 100%; border-radius: 8.4%/3.9%; }
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas"></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const type = params.get("type") || "header";
+  const lang = params.get("lang") || "ja";
+  document.body.dataset.lang = lang;
+  document.documentElement.lang = lang;
+
+  // header: ヘッダーの一言 / title: 検索結果の見出し / features: 検索結果の主な機能（周波数の範囲・音名と和音・波形）
+  const copy = {
+    ja: {
+      header: "澄んだ音を、ひとつだけ。",
+      title: "好きな高さの音を、<br>すぐに鳴らせる。",
+      features: ["20Hz〜20,000Hz", "音名と和音でも鳴らせる", "4 つの波形"],
+    },
+    en: {
+      header: "Just one pure tone.",
+      title: "Play any tone,<br>instantly.",
+      features: ["20 Hz to 20,000 Hz", "Notes and chords, too", "4 waveforms"],
+    },
+    "zh-Hans": {
+      header: "纯净的声音，只要一个。",
+      title: "想要的音高，<br>立即播放。",
+      features: ["20 Hz～20,000 Hz", "也能按音名与和弦播放", "4 种波形"],
+    },
+    "zh-Hant": {
+      header: "純淨的聲音，只要一個。",
+      // 繁体字の句読点は字面の中央に来るので、行末の「，」は浮いて見える。見出しは句読点を使わずに改行する
+      title: "想要的音高<br>立即播放",
+      features: ["20 Hz～20,000 Hz", "也能用音名與和弦播放", "4 種波形"],
+    },
+    ko: {
+      header: "맑은 소리, 단 하나.",
+      title: "원하는 높이의 소리를<br>바로 재생.",
+      features: ["20Hz~20,000Hz", "음이름과 화음으로도 재생", "4가지 파형"],
+    },
+    es: {
+      header: "Solo un tono puro.",
+      title: "Cualquier tono,<br>al instante.",
+      features: ["De 20 Hz a 20.000 Hz", "También notas y acordes", "4 formas de onda"],
+    },
+    fr: {
+      header: "Un seul son, tout simplement pur.",
+      title: "Le son de votre choix,<br>instantanément.",
+      features: ["De 20 Hz à 20 000 Hz", "Notes et accords aussi", "4 formes d’onde"],
+    },
+    de: {
+      header: "Nur ein reiner Ton.",
+      title: "Jeden Ton,<br>sofort abspielen.",
+      features: ["20 Hz bis 20.000 Hz", "Auch Töne und Akkorde", "4 Wellenformen"],
+    },
+    it: {
+      header: "Solo un tono puro.",
+      title: "Qualsiasi tono,<br>all’istante.",
+      features: ["Da 20 Hz a 20.000 Hz", "Anche note e accordi", "4 forme d’onda"],
+    },
+    "pt-BR": {
+      header: "Só um tom puro.",
+      title: "Qualquer tom,<br>na hora.",
+      features: ["De 20 Hz a 20.000 Hz", "Também notas e acordes", "4 formas de onda"],
+    },
+    ru: {
+      header: "Только один чистый тон.",
+      title: "Любой тон —<br>мгновенно.",
+      features: ["От 20 Hz до 20 000 Hz", "Ноты и аккорды тоже", "4 формы волны"],
+    },
+    id: {
+      header: "Hanya satu nada murni.",
+      title: "Nada apa pun,<br>seketika.",
+      features: ["20 Hz hingga 20.000 Hz", "Juga not dan akor", "4 bentuk gelombang"],
+    },
+  }[lang];
+  // 文言の無い言語は、絵だけの画像を書き出さないようここで止める（render_creative_assets.sh でも先に確かめる）
+  if (!copy) {
+    document.body.innerHTML = `<h1 style="color:red;font-size:200px">No copy for "${lang}"</h1>`;
+    throw new Error(`creative.html に ${lang} の文言がありません`);
+  }
+
+  const canvas = document.getElementById("canvas");
+  const W = innerWidth, H = innerHeight;
+  const add = (html, parent = canvas) => { parent.insertAdjacentHTML("beforeend", html); return parent.lastElementChild; };
+  const svg = (html) => add(`<svg class="layer" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${html}</svg>`);
+  // 1 つの文書に SVG をいくつも置くので、グラデーションやフィルターの id は呼び出しごとに変える
+  let serial = 0;
+  const ids = (...names) => { serial += 1; return Object.fromEntries(names.map((n) => [n, `${n}${serial}`])); };
+
+  // アイコンの図柄（AppIcon.icon のレイヤー）を、背景を除いた外接矩形で切り出す（アプリの LogoMark と同じ）。
+  // 外接矩形は数値で持たず、レイヤーの SVG を読んで測る（アイコンの図柄を変えても、ここを直さずに済むように）
+  const markLayers = ["bowl", "bars", "bar-center"];
+  let markViewBox = "";
+  const measureMark = () => Promise.all(markLayers.map((name) => new Promise((resolve, reject) => {
+    // file:// は fetch で読めないので XHR で読む（render_creative_assets.sh が --allow-file-access-from-files で開く）
+    const request = new XMLHttpRequest();
+    request.open("GET", `mark/${name}.svg`);
+    request.onload = () => resolve(request.responseText);
+    request.onerror = () => reject(new Error(`mark/${name}.svg を読めませんでした`));
+    request.send();
+  }))).then((sources) => {
+    const probe = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    probe.setAttribute("style", "position:absolute;visibility:hidden");
+    probe.innerHTML = sources.map((source) => new DOMParser().parseFromString(source, "image/svg+xml")
+      .documentElement.innerHTML).join("");
+    document.body.appendChild(probe);
+    const box = probe.getBBox();
+    probe.remove();
+    markViewBox = `${box.x} ${box.y} ${box.width} ${box.height}`;
+  });
+  const logo = (size, style, parent = canvas) => add(
+    `<div class="logo" style="font-size:${size}px;${style}">` +
+    `<svg viewBox="${markViewBox}">` +
+    markLayers.map((n) => `<image href="mark/${n}.svg" width="1024" height="1024"/>`).join("") +
+    `</svg><span class="wordmark">One Tone</span></div>`, parent);
+
+  // 言語によって文言の長さが違うので、幅に収まるまで文字を小さくする（折り返さない）
+  const fit = (element, maxWidth, measure = element) => {
+    let size = parseFloat(element.style.fontSize);
+    while (measure.scrollWidth > maxWidth && size > 40) {
+      size -= 2;
+      element.style.fontSize = `${size}px`;
+    }
+  };
+
+  // 正弦波の折れ線。x = origin で 0 を上向きに横切る
+  const wave = (x0, x1, y, wavelength, amplitude, origin = x0) => {
+    const points = [];
+    for (let x = x0; x <= x1; x += 3) {
+      points.push(`${x.toFixed(1)},${(y - amplitude * Math.sin(2 * Math.PI * (x - origin) / wavelength)).toFixed(1)}`);
+    }
+    return `M${points.join(" L")}`;
+  };
+
+  // 光る線（ネオン管）: 太くぼかした光 → 細い光 → 白っぽい芯 の 3 層
+  // opacity: 横方向の不透明度の [位置（0...1）, 不透明度] の列。省略すると全体を同じ明るさで描く
+  const neon = (d, width, gradient, opacity = null) => {
+    const id = ids("g", "wide", "near", "mg", "m");
+    const mask = opacity ? `
+      <linearGradient id="${id.mg}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
+        ${opacity.map(([offset, value]) => `<stop offset="${offset}" stop-color="#fff" stop-opacity="${value}"/>`).join("")}
+      </linearGradient>
+      <mask id="${id.m}" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+        <rect width="${W}" height="${H}" fill="url(#${id.mg})"/>
+      </mask>` : "";
+    return svg(`
+      <defs>
+        <linearGradient id="${id.g}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0">
+          ${gradient.map(([offset, color]) => `<stop offset="${offset}" stop-color="${color}"/>`).join("")}
+        </linearGradient>
+        <filter id="${id.wide}" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <feGaussianBlur stdDeviation="${width * 2.2}"/></filter>
+        <filter id="${id.near}" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <feGaussianBlur stdDeviation="${width * 0.6}"/></filter>
+        ${mask}
+      </defs>
+      <g ${opacity ? `mask="url(#${id.m})"` : ""} fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="${d}" stroke="url(#${id.g})" stroke-width="${width * 3}" opacity="0.55" filter="url(#${id.wide})"/>
+        <path d="${d}" stroke="url(#${id.g})" stroke-width="${width * 1.6}" opacity="0.9" filter="url(#${id.near})"/>
+        <path d="${d}" stroke="url(#${id.g})" stroke-width="${width}"/>
+        <path d="${d}" stroke="#e8fdff" stroke-width="${width * 0.35}" opacity="0.8"/>
+      </g>`);
+  };
+
+  // アプリの波形パネルのような方眼。中央から外へ薄れていく
+  const grid = (cx, cy, step, rx, ry) => {
+    const id = ids("p", "f", "gm");
+    return svg(`
+      <defs>
+        <pattern id="${id.p}" width="${step}" height="${step}" patternUnits="userSpaceOnUse" x="${cx % step}" y="${cy % step}">
+          <path d="M ${step} 0 L 0 0 0 ${step}" fill="none" stroke="rgba(0, 229, 255, 0.11)" stroke-width="2"/>
+        </pattern>
+        <radialGradient id="${id.f}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="1"
+          gradientTransform="translate(${cx} ${cy}) scale(${rx} ${ry}) translate(${-cx} ${-cy})">
+          <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+        </radialGradient>
+        <mask id="${id.gm}" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <rect width="${W}" height="${H}" fill="url(#${id.f})"/></mask>
+      </defs>
+      <rect width="${W}" height="${H}" fill="url(#${id.p})" mask="url(#${id.gm})"/>`);
+  };
+
+  const glow = (cx, cy, rx, ry, color, opacity) => {
+    const id = ids("r");
+    return svg(`
+      <defs><radialGradient id="${id.r}"><stop offset="0" stop-color="${color}" stop-opacity="${opacity}"/>
+      <stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${id.r})"/>`);
+  };
+
+  const icons = {
+    // 周波数の範囲: 右へ行くほど細かくなる波
+    range: (() => {
+      const pts = [];
+      for (let i = 0; i <= 120; i++) {
+        const t = i / 120;
+        pts.push(`${(t * 100).toFixed(1)},${(50 - 34 * Math.sin(2 * Math.PI * (0.8 * t + 2.2 * t * t))).toFixed(1)}`);
+      }
+      return `<path d="M${pts.join(" L")}" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+    })(),
+    // 音名と和音: 連桁の付いた 2 つの音符
+    note: `<g fill="var(--accent)"><ellipse cx="24" cy="80" rx="17" ry="13" transform="rotate(-20 24 80)"/>` +
+      `<ellipse cx="78" cy="68" rx="17" ry="13" transform="rotate(-20 78 68)"/></g>` +
+      `<path d="M38 78 V18 L92 6 V66" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linejoin="round"/>` +
+      `<path d="M38 18 L92 6" stroke="var(--accent)" stroke-width="16"/>`,
+    // 波形: 矩形波とノコギリ波
+    waveform: `<path d="M0 72 H18 V28 H44 V72 H58 L100 28 V72" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`,
+  };
+  const feature = (icon, text) =>
+    `<div class="feature"><i><svg viewBox="0 0 100 100">${icons[icon]}</svg></i><span>${text}</span></div>`;
+
+  const phone = (screen, cx, top, width, rotate, z) => add(
+    `<div class="phone" style="left:${cx - width / 2}px;top:${top}px;width:${width}px;transform:rotate(${rotate}deg);z-index:${z}">` +
+    `<img src="screens/${lang}/${screen}.png"></div>`);
+
+  const titleGradient = [[0, "#00ff99"], [0.5, "#00e5ff"], [1, "#0066ff"]];
+
+  Promise.all([document.fonts.load("100px Audiowide"), measureMark()]).then(() => {
+    if (type === "header") {
+      // 21:9。ロゴを中央に置き、ロゴから左右へ澄んだ音（正弦波）が伸びる
+      const cy = H * 0.42;
+      grid(W / 2, cy, 110, W * 0.55, H * 0.75);
+      glow(W / 2, cy, W * 0.36, H * 0.55, "#00e5ff", 0.16);
+      const mark = logo(200, "visibility:hidden");
+      const left = W / 2 - mark.offsetWidth / 2, right = W / 2 + mark.offsetWidth / 2;
+      mark.style.left = `${left}px`;
+      mark.style.top = `${cy - mark.offsetHeight / 2}px`;
+      mark.style.visibility = "visible";
+      // ロゴの際では波を消し、外へ向かってはっきりさせる（ロゴから音が出ていくように見せる）
+      const gap = 50, fade = 280;
+      const opacity = [
+        [0, 0.75], [(left - gap - fade) / W, 1], [(left - gap) / W, 0],
+        [(right + gap) / W, 0], [(right + gap + fade) / W, 1], [1, 0.75],
+      ];
+      // 中央を位相 0 にして、左右に点対称の波を描く
+      neon(wave(0, W, cy, 430, 150, W / 2), 9, titleGradient, opacity);
+      canvas.appendChild(mark);
+      const phrase = add(`<div class="phrase" style="top:${cy + mark.offsetHeight / 2 + 150}px;font-size:100px">` +
+          `<span>${copy.header}</span></div>`);
+      // 中央に寄せた範囲（ロゴの幅より少し広いくらい）に収める
+      fit(phrase, 2000, phrase.firstElementChild);
+    } else {
+      // 3:2。左に何のアプリかと主な機能、右に実際の画面
+      grid(W * 0.72, H * 0.45, 110, W * 0.45, H * 0.7);
+      glow(W * 0.74, H * 0.5, W * 0.32, H * 0.5, "#00e5ff", 0.2);
+      // 検索結果では小さく出るので、文字は大きめにして、長い言語だけ幅に合わせて縮める
+      const width = 1900;
+      const column = add(`<div class="copy" style="left:250px;width:${width}px"></div>`);
+      logo(130, "", column);
+      const title = add(`<div class="title" style="font-size:200px;margin-top:140px">${copy.title}</div>`, column);
+      const features = add(`<div class="features" style="font-size:116px;margin-top:150px">` +
+          feature("range", copy.features[0]) + feature("note", copy.features[1]) + feature("waveform", copy.features[2]) +
+          `</div>`, column);
+      fit(title, width);
+      fit(features, width);
+      column.style.top = `${(H - column.offsetHeight) / 2 - 40}px`;
+      neon(wave(-40, W + 40, H * 0.885, 340, 64, W * 0.25), 6, titleGradient,
+        [[0, 0.35], [0.45, 0.9], [1, 1]]);
+      phone("05_chord", W - 1180, 330, 840, -6, 1);
+      phone("01_sine", W - 640, 230, 900, 5, 2);
+    }
+  });
+</script>
+</body>
+</html>
