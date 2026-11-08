@@ -191,6 +191,9 @@ swiftc -O -parse-as-library Tools/draw_app_icon.swift OneTone/AppIconDesign.swif
   Job Summary / artifact の JSON を `AppStore/metadata/` に取り込んでから `dry-run` で差分ゼロを確かめる。手元の検査は `python3 Tools/upload_metadata.py --check`
 - 「このバージョンの新機能」（whatsNew）は `AppStore/metadata/whats_new/<バージョン>.json` に全言語ぶん書く。反映先のバージョン名と一致するファイルだけが書き込まれ、
   無いバージョンでは App Store Connect 側の値を残す（前の版の文が次の版に載らないよう、言語ごとの JSON には持たない）
+- アプリ名は言語ごとに `<言語>.json` の `name`（任意。上限 30 字）。App 情報（iOS / macOS で共通）に書き込み、書いていない言語は App Store Connect 側の値を残す。
+  App Store のアプリ名は言語ごとに重複を判定され、言語を足すと主言語の「One Tone」が使われる。en-US と zh-Hans は「One Tone」が別のアプリに使われているため、
+  `name` で別の名前（「One Tone: Tone Generator」「One Tone: 音调发生器」）にしている。言語を足して 409（`STATE_ERROR.DUPLICATE_NAME.DIFFERENT_ACCOUNT`）になったら、その言語に `name` を書く
 - 審査メモ（App Review Information の Notes）は `AppStore/metadata/review_notes.txt`。言語ごとではなくバージョンに 1 つで、上限 4000 字。画面や機能を変えたリリースでは合わせて直す
 - 認証は Organization secrets の App Store Connect API Key（`APPLE_API_KEY_*`）。手元に .p8 は無いので、App Store Connect の状態確認は CI の dry-run で行う
 - PR 本文のスクリーンショットは `gh pr create --attach`（gh v2.99.0 以上）で添付する（assets ブランチは使わない）。本文は Markdown の表に `![Before](./before.png)` の形で書き、
