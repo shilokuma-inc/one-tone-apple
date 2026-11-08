@@ -41,8 +41,13 @@ EDITABLE_STATES = {
     "INVALID_BINARY",
 }
 
-#: アップロード後、Apple 側の取り込みが終わるのを待つ上限（秒）
+#: アップロード後、言語ごとに Apple 側の取り込みが終わるのを待つ上限（秒）。
+#: 超えても止めずに次の言語へ進み、終わっていない分は全言語のあとで `FINAL_DELIVERY_TIMEOUT` まで待つ
 DELIVERY_TIMEOUT = 300
+
+#: 全言語を上げたあと、取り込みが終わっていない分をまとめて待つ上限（秒）。
+#: Apple 側の取り込みが遅い時間帯は 1 枚に 5 分以上かかることがある
+FINAL_DELIVERY_TIMEOUT = 20 * 60
 
 #: 1 リクエストあたりの待ち時間の上限（秒）。指定しないと応答が無いときに無期限に待つ
 REQUEST_TIMEOUT = 60
@@ -375,11 +380,14 @@ class AppStoreConnect:
             {"data": [{"type": "appScreenshots", "id": i} for i in screenshot_ids]},
         )
 
-    def wait_for_delivery(self, screenshot_ids: list[str]) -> None:
-        """Apple 側の取り込みが終わるまで待つ。失敗していればここで気づける。"""
+    def wait_for_delivery(self, screenshot_ids: list[str], timeout: float = DELIVERY_TIMEOUT) -> list[str]:
+        """Apple 側の取り込みが終わるまで `timeout` 秒まで待ち、終わらなかったものの ID を返す。
+
+        取り込みに失敗したもの（`assetDeliveryState.errors`）があれば、その場で止める。
+        """
         if self.dry_run:
-            return
-        deadline = time.time() + DELIVERY_TIMEOUT
+            return []
+        deadline = time.time() + timeout
         pending = list(screenshot_ids)
         while pending and time.time() < deadline:
             still_pending = []
@@ -395,11 +403,7 @@ class AppStoreConnect:
             pending = still_pending
             if pending:
                 time.sleep(5)
-        if pending:
-            raise SystemExit(
-                f"{len(pending)} 枚の取り込みが {DELIVERY_TIMEOUT} 秒で終わりませんでした。"
-                "App Store Connect の画面で状態を確認してください。"
-            )
+        return pending
 
 
 def app_info_state(info: dict) -> str:
