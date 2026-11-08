@@ -129,6 +129,7 @@ class RefData:
         self.raw = attributes
 
     def placement_type(self, name: str) -> dict:
+        """置き場所（PRODUCT_PAGE_HEADER_ASSET など）の定義。参照データに無ければ止める。"""
         for entry in self.raw.get("placementTypes", []):
             if entry.get("placementTypeId") == name:
                 return entry
@@ -150,6 +151,7 @@ class RefData:
         return None
 
     def group_limit(self, placement_type: str, group: str) -> int | None:
+        """App Store のバージョン（FEATURE）で、その置き場所・グループに置ける数の上限。分からなければ None。"""
         for feature in self.raw.get("features", []):
             if feature.get("featureId") != FEATURE:
                 continue
@@ -162,6 +164,7 @@ class RefData:
         return None
 
     def image_spec(self, spec_id: str) -> dict | None:
+        """画像の仕様（寸法・形式・透過の可否など）。動画の仕様や知らない ID なら None。"""
         for spec in self.raw.get("imageSpecs", []):
             if spec.get("specId") == spec_id:
                 return spec
@@ -281,6 +284,7 @@ class AssetLibrary:
         )
 
     def place(self, localization_id: str, placement_type: str, group: str, image_id: str) -> None:
+        """Asset Library の画像を、その言語の置き場所・グループに配置する。"""
         if self.client.dry_run:
             return
         self.client.post(
@@ -318,6 +322,7 @@ def load_ref_data(client) -> RefData:
 
 
 def main() -> int:
+    """引数のモード（反映 / --dry-run / --ref-data / --check）で動かす。"""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--bundle-id", help="省略すると project.pbxproj から読む")
     parser.add_argument("--languages", help="対象の言語（カンマ区切り）。省略すると全言語")
