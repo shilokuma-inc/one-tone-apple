@@ -188,10 +188,12 @@ def platforms(selected: str | None) -> list[str]:
 
 
 def _creative_assets_config() -> dict:
+    """`AppStore/creative_assets.json` の中身。"""
     return json.loads(CREATIVE_ASSETS_FILE.read_text(encoding="utf-8"))
 
 
 def creative_assets() -> list[CreativeAsset]:
+    """クリエイティブアセットの置き場所ごとの、書き出す画像（layout・ファイル名・寸法）と反映先の置き場所。"""
     return [
         CreativeAsset(
             layout=entry["layout"],
@@ -246,6 +248,7 @@ def parse_list(raw: str | None) -> list[str] | None:
 
 
 def main() -> int:
+    """サブコマンドの結果を、シェルから読みやすいタブ区切り（display-types は JSON）で出す。"""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "command",
