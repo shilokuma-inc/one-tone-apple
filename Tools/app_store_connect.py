@@ -401,6 +401,8 @@ class AppStoreConnect:
         """Apple 側の取り込みが終わるまで `timeout` 秒まで待ち、終わらなかったものの ID を返す。
 
         取り込みに失敗したもの（`assetDeliveryState.errors`）があれば、その場で止める。
+        期限を過ぎたら残りは問い合わせずに「終わっていない」として返すので、超えるのは最後の 1 件の
+        問い合わせの時間（最大 `REQUEST_TIMEOUT` 秒）だけになる。
         """
         if self.dry_run:
             return []
@@ -408,7 +410,11 @@ class AppStoreConnect:
         pending = list(screenshot_ids)
         while pending and time.time() < deadline:
             still_pending = []
-            for screenshot_id in pending:
+            for index, screenshot_id in enumerate(pending):
+                # 1 件の問い合わせに最大 REQUEST_TIMEOUT 秒かかるので、件数が多いと 1 周だけで期限を大きく超えうる
+                if time.time() >= deadline:
+                    still_pending.extend(pending[index:])
+                    break
                 attributes = self.get(f"/v1/appScreenshots/{screenshot_id}")["data"]["attributes"]
                 state = attributes.get("assetDeliveryState") or {}
                 if state.get("errors"):
@@ -418,8 +424,8 @@ class AppStoreConnect:
                 if state.get("state") != "COMPLETE":
                     still_pending.append(screenshot_id)
             pending = still_pending
-            if pending:
-                time.sleep(5)
+            if pending and time.time() < deadline:
+                time.sleep(max(0.0, min(5.0, deadline - time.time())))
         return pending
 
 
