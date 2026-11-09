@@ -454,6 +454,13 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
     print(f"  {SHARED_FILE}: {json.dumps(shared_body, ensure_ascii=False)}")
     for target in targets:
         body = exported_language(values[target.store_locale])
+        if APP_NAME_FIELD not in body:
+            # App 情報を読めなかったときに手元の名前まで消すと、主言語の名前が使えない言語（en / zh-Hans）を
+            # 次に追加するときに 409（STATE_ERROR.DUPLICATE_NAME）を避けられなくなるので残す
+            local_name = read_local_json(directory / f"{target.language}.json").get(APP_NAME_FIELD)
+            if local_name:
+                body = {APP_NAME_FIELD: local_name, **body}
+                print(f"  {target.language}.json: {APP_NAME_FIELD} は App Store Connect から読めなかったので、手元の値を残します")
         write_json(directory / f"{target.language}.json", body, LANGUAGE_COMMENT)
         print(f"  {target.language}.json（{target.store_locale}）:")
         for line in json.dumps(body, ensure_ascii=False, indent=2).splitlines():
