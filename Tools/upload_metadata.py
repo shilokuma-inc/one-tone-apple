@@ -454,6 +454,13 @@ def export(directory: Path, targets: list[Language], current: dict[str, dict[str
     print(f"  {SHARED_FILE}: {json.dumps(shared_body, ensure_ascii=False)}")
     for target in targets:
         body = exported_language(values[target.store_locale])
+        if APP_NAME_FIELD not in body:
+            # App 情報を読めなかったときに手元の名前まで消すと、主言語の名前が使えない言語（en / zh-Hans）を
+            # 次に追加するときに 409（STATE_ERROR.DUPLICATE_NAME）を避けられなくなるので残す
+            local_name = read_local_json(directory / f"{target.language}.json").get(APP_NAME_FIELD)
+            if local_name:
+                body = {APP_NAME_FIELD: local_name, **body}
+                print(f"  {target.language}.json: {APP_NAME_FIELD} は App Store Connect から読めなかったので、手元の値を残します")
         write_json(directory / f"{target.language}.json", body, LANGUAGE_COMMENT)
         print(f"  {target.language}.json（{target.store_locale}）:")
         for line in json.dumps(body, ensure_ascii=False, indent=2).splitlines():
@@ -616,7 +623,13 @@ def main() -> int:
             exported_versions[platform] = version_string
             for locale in available:
                 print(f"  {locale}: 現在値を読みました")
-            detail = client.review_detail(version["id"])
+            try:
+                detail = client.review_detail(version["id"])
+            except ApiError as error:
+                # 止めずにほかの platform も読む。both で片方を読めなければ、export は書き出さずに止まる
+                print(f"  審査メモ: 読めませんでした（{error}）")
+                failures.append(f"{platform}: 審査メモを読めませんでした: {error}")
+                continue
             exported_notes[platform] = ((detail or {}).get("attributes", {}).get("notes") or "").strip()
             print(f"  審査メモ: {'現在値を読みました' if exported_notes[platform] else '空です'}")
             continue
