@@ -41,8 +41,13 @@ EDITABLE_STATES = {
     "INVALID_BINARY",
 }
 
-#: アップロード後、Apple 側の取り込みが終わるのを待つ上限（秒）
+#: アップロード後、言語ごとに Apple 側の取り込みが終わるのを待つ上限（秒）。
+#: 超えても止めずに次の言語へ進み、終わっていない分は全言語のあとで `FINAL_DELIVERY_TIMEOUT` まで待つ
 DELIVERY_TIMEOUT = 300
+
+#: 全言語を上げたあと、取り込みが終わっていない分をまとめて待つ上限（秒）。
+#: Apple 側の取り込みが遅い時間帯は 1 枚に 5 分以上かかることがある
+FINAL_DELIVERY_TIMEOUT = 20 * 60
 
 #: 1 リクエストあたりの待ち時間の上限（秒）。指定しないと応答が無いときに無期限に待つ
 REQUEST_TIMEOUT = 60
@@ -56,7 +61,10 @@ TOKEN_REFRESH_MARGIN = 5 * 60
 
 
 class ApiError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        #: HTTP のステータスコード。404 のような「無い」を呼び出し側で見分けるのに使う
+        self.status = status
 
 
 class AppStoreConnect:
@@ -89,7 +97,7 @@ class AppStoreConnect:
                 raw = response.read()
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")
-            raise ApiError(f"{method} {url} が {error.code} で失敗しました\n{detail}") from None
+            raise ApiError(f"{method} {url} が {error.code} で失敗しました\n{detail}", error.code) from None
         return json.loads(raw) if raw else {}
 
     def get(self, path: str, params: dict | None = None) -> dict:
@@ -205,6 +213,117 @@ class AppStoreConnect:
         )
         return response["data"]["id"]
 
+    # MARK: App 情報（言語ごとのアプリ名）
+
+    def editable_app_info(self, app_id: str) -> dict:
+        """編集できる状態の `appInfos` を 1 つ選ぶ。
+
+        アプリ名は言語ごとに App 情報（`appInfoLocalizations`）にあり、iOS / macOS で共通。
+        配信中のもの（READY_FOR_DISTRIBUTION）とは別に、次のバージョンの準備中だけ編集できるものがある。
+        """
+        infos = self.app_infos(app_id)
+        editable = [info for info in infos if app_info_state(info) in EDITABLE_STATES]
+        if len(editable) != 1:
+            states = ", ".join(sorted(app_info_state(info) for info in infos))
+            raise SystemExit(
+                f"編集できる App 情報が {len(editable)} 件あります（いまある状態: {states or 'なし'}）。"
+                "App Store Connect で次のバージョンを作ってから実行してください。"
+            )
+        return editable[0]
+
+    def app_infos(self, app_id: str) -> list[dict]:
+        """そのアプリの `appInfos` を全部返す（配信中・審査中・準備中など）。"""
+        return self.get_all(f"/v1/apps/{app_id}/appInfos", {"limit": 50})
+
+    def current_app_info(self, app_id: str) -> tuple[dict, bool]:
+        """いちばん新しい App 情報と、それを編集できるかを返す。
+
+        編集できるもの（次のバージョンの準備中）があればそれを、無ければ審査中などのもの、
+        それも無ければ配信中のものを返す。片方の platform だけ審査に出したあとは、
+        App 情報（iOS / macOS で共通）は審査中になり、もう片方の準備中でも編集できない。
+        """
+        infos = self.app_infos(app_id)
+        editable = [info for info in infos if app_info_state(info) in EDITABLE_STATES]
+        if len(editable) > 1:
+            raise SystemExit(f"編集できる App 情報が {len(editable)} 件あります")
+        if editable:
+            return editable[0], True
+        # appInfos の返却順は保証されていないので、順番で「新しいもの」を選ばない。候補が 1 件に決まらなければ止める
+        newer = [info for info in infos
+                 if app_info_state(info) not in ("READY_FOR_DISTRIBUTION", "REPLACED_WITH_NEW_INFO")]
+        if len(newer) > 1:
+            states = ", ".join(sorted(app_info_state(info) for info in newer))
+            raise SystemExit(f"審査中などの App 情報が {len(newer)} 件あります（{states}）。どれを読むか決められません")
+        if newer:
+            return newer[0], False
+        live = [info for info in infos if app_info_state(info) == "READY_FOR_DISTRIBUTION"]
+        if not live:
+            raise SystemExit("App 情報がありません")
+        return live[0], False
+
+    def app_info_localizations(self, app_info_id: str) -> dict[str, dict]:
+        """ロケール → そのロケールの `appInfoLocalizations`（アプリ名などの現在値を含む）。"""
+        entries = self.get_all(f"/v1/appInfos/{app_info_id}/appInfoLocalizations", {"limit": 50})
+        return {entry["attributes"]["locale"]: entry for entry in entries}
+
+    def create_app_info_localization(self, app_info_id: str, locale: str, attributes: dict) -> str:
+        """App 情報に言語を追加する。
+
+        説明文の言語（`create_localization`）を先に追加すると、アプリ名に主言語の名前が使われ、
+        その名前が別のアプリに使われている言語では 409（STATE_ERROR.DUPLICATE_NAME）で拒否される。
+        別の名前にする言語は、ここで名前を指定して先に作っておく。
+        """
+        if self.dry_run:
+            return "dry-run"
+        response = self.post(
+            "/v1/appInfoLocalizations",
+            {
+                "data": {
+                    "type": "appInfoLocalizations",
+                    "attributes": {**attributes, "locale": locale},
+                    "relationships": {
+                        "appInfo": {"data": {"type": "appInfos", "id": app_info_id}}
+                    },
+                }
+            },
+        )
+        return response["data"]["id"]
+
+    # MARK: 審査情報（App Review Information）
+
+    def review_detail(self, version_id: str) -> dict | None:
+        """そのバージョンの `appStoreReviewDetails`（審査メモなど）。まだ作られていなければ None。
+
+        説明文と違って言語ごとではなく、バージョン（= platform）ごとに 1 つだけある。
+        """
+        try:
+            response = self.get(f"/v1/appStoreVersions/{version_id}/appStoreReviewDetail")
+        except ApiError as error:
+            if error.status == 404:
+                return None
+            raise
+        return response.get("data")
+
+    def create_review_detail(self, version_id: str, attributes: dict) -> str:
+        """そのバージョンに審査情報を作る。審査に一度も出していないバージョンでは無いことがある。"""
+        if self.dry_run:
+            return "dry-run"
+        response = self.post(
+            "/v1/appStoreReviewDetails",
+            {
+                "data": {
+                    "type": "appStoreReviewDetails",
+                    "attributes": attributes,
+                    "relationships": {
+                        "appStoreVersion": {
+                            "data": {"type": "appStoreVersions", "id": version_id}
+                        }
+                    },
+                }
+            },
+        )
+        return response["data"]["id"]
+
     # MARK: スクリーンショット
 
     def existing_set(self, localization_id: str, display_type: str) -> str | None:
@@ -278,11 +397,14 @@ class AppStoreConnect:
             {"data": [{"type": "appScreenshots", "id": i} for i in screenshot_ids]},
         )
 
-    def wait_for_delivery(self, screenshot_ids: list[str]) -> None:
-        """Apple 側の取り込みが終わるまで待つ。失敗していればここで気づける。"""
+    def wait_for_delivery(self, screenshot_ids: list[str], timeout: float = DELIVERY_TIMEOUT) -> list[str]:
+        """Apple 側の取り込みが終わるまで `timeout` 秒まで待ち、終わらなかったものの ID を返す。
+
+        取り込みに失敗したもの（`assetDeliveryState.errors`）があれば、その場で止める。
+        """
         if self.dry_run:
-            return
-        deadline = time.time() + DELIVERY_TIMEOUT
+            return []
+        deadline = time.time() + timeout
         pending = list(screenshot_ids)
         while pending and time.time() < deadline:
             still_pending = []
@@ -298,11 +420,13 @@ class AppStoreConnect:
             pending = still_pending
             if pending:
                 time.sleep(5)
-        if pending:
-            raise SystemExit(
-                f"{len(pending)} 枚の取り込みが {DELIVERY_TIMEOUT} 秒で終わりませんでした。"
-                "App Store Connect の画面で状態を確認してください。"
-            )
+        return pending
+
+
+def app_info_state(info: dict) -> str:
+    """App 情報の状態。`appStoreState` は非推奨になり `state` に移ったので、新しい方を優先して読む。"""
+    attributes = info.get("attributes", {})
+    return attributes.get("state") or attributes.get("appStoreState") or ""
 
 
 def make_token(key_id: str, issuer_id: str, private_key: str) -> str:
