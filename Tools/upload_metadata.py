@@ -623,7 +623,13 @@ def main() -> int:
             exported_versions[platform] = version_string
             for locale in available:
                 print(f"  {locale}: 現在値を読みました")
-            detail = client.review_detail(version["id"])
+            try:
+                detail = client.review_detail(version["id"])
+            except ApiError as error:
+                # 止めずにほかの platform も読む。both で片方を読めなければ、export は書き出さずに止まる
+                print(f"  審査メモ: 読めませんでした（{error}）")
+                failures.append(f"{platform}: 審査メモを読めませんでした: {error}")
+                continue
             exported_notes[platform] = ((detail or {}).get("attributes", {}).get("notes") or "").strip()
             print(f"  審査メモ: {'現在値を読みました' if exported_notes[platform] else '空です'}")
             continue
