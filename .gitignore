@@ -88,3 +88,6 @@ fastlane/test_output
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
+
+# 撮影スクリプトがリポジトリの直下でアプリを起動したときに書き出されるカバレッジのデータ
+default.profraw

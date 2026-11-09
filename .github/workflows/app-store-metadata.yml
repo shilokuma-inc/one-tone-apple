@@ -1,10 +1,12 @@
 name: Metadata/App Store
 
-# App Store の説明文・キーワード・プロモーションテキスト・URL・審査メモを App Store Connect に反映する。
+# App Store のアプリ名・説明文・キーワード・プロモーションテキスト・URL・新機能・審査メモを App Store Connect に反映する。
 #
 # 元ネタは AppStore/metadata/<言語>.json と shared.json。review_notes.txt があれば、
-# App Review Information の Notes（審査メモ。言語によらず 1 つ）にも書き込む。欠損と文字数超過は
-# Verify/App Store metadata が PR の時点で落とすので、ここまで来たものは通る前提。
+# App Review Information の Notes（審査メモ。言語によらず 1 つ）にも書き込む。
+# 「このバージョンの新機能」は whats_new/<バージョン>.json で、反映先のバージョン名と一致するファイルだけを書き込む。
+# アプリ名（<言語>.json の name）は App 情報（iOS / macOS で共通）に書き込み、無い言語は説明文の言語より先に作る。
+# 欠損と文字数超過は Verify/App Store metadata が PR の時点で落とすので、ここまで来たものは通る前提。
 #
 # このアプリは iOS と macOS を同じ Bundle ID で配信しているが、App Store Connect のバージョン（と説明文）は
 # platform ごとに別物。platform で反映先を選ぶ（既定は both = 両方に同じ内容を書く）。
@@ -37,7 +39,7 @@ on:
           - macos
         default: both
       languages:
-        description: '反映する言語（カンマ区切り）。空なら languages.json の全言語（ja）'
+        description: '反映する言語（カンマ区切り）。空なら languages.json の全言語（12 言語）'
         required: false
         default: ''
       app_version:
@@ -144,7 +146,7 @@ jobs:
               echo '```'
             fi
             if [ "$MODE" = "export" ]; then
-              for file in AppStore/metadata/*.json; do
+              for file in AppStore/metadata/*.json AppStore/metadata/whats_new/*.json; do
                 [ -f "$file" ] || continue
                 echo
                 echo "### ${file}"

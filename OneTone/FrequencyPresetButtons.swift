@@ -32,14 +32,15 @@ struct FrequencyPresetButtons: View {
 /// パッド風のボタン。押している間は少し沈んで明るくなり、押したことが手応えとして分かるようにする
 struct PadButtonStyle: ButtonStyle {
     let isSelected: Bool
+    @Environment(\.themeColor) private var themeColor
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.cornerRadius)
         VStack(spacing: 6) {
             // 選択中は点灯した丸、非選択は輪郭だけの丸。色が分からなくても形で区別できる
             Circle()
-                .fill(isSelected ? Theme.accent : Color.clear)
-                .overlay(Circle().stroke(isSelected ? Theme.accent : Theme.textDisabled, lineWidth: 1.5))
+                .fill(isSelected ? themeColor.accent : Color.clear)
+                .overlay(Circle().stroke(isSelected ? themeColor.accent : Theme.textDisabled, lineWidth: 1.5))
                 .frame(width: 8, height: 8)
             configuration.label
                 .font(.system(.callout, design: .rounded).weight(isSelected ? .bold : .medium))
@@ -54,12 +55,12 @@ struct PadButtonStyle: ButtonStyle {
             ZStack {
                 shape.fill(Theme.surfaceRaised)
                 // 選択中は差し色をうっすら重ね、押している間はさらに明るくする
-                shape.fill(Theme.accent.opacity((isSelected ? 0.15 : 0) + (configuration.isPressed ? 0.15 : 0)))
+                shape.fill(themeColor.accent.opacity((isSelected ? 0.15 : 0) + (configuration.isPressed ? 0.15 : 0)))
             }
         )
         .overlay(
             shape.strokeBorder(
-                isSelected ? Theme.accent : Theme.textDisabled.opacity(0.5),
+                isSelected ? themeColor.accent : Theme.textDisabled.opacity(0.5),
                 lineWidth: isSelected ? 2 : 1
             )
         )

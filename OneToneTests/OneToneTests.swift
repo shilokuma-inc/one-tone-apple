@@ -5,7 +5,13 @@
 //  Created by 村石 拓海 on 2024/05/28.
 //
 
+import CoreText
 import XCTest
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 @testable import OneTone
 
 final class OneToneTests: XCTestCase {
@@ -303,6 +309,169 @@ final class OneToneTests: XCTestCase {
         }
     }
 
+    // MARK: - ToneSynthesizer（和音）
+
+    private static let cMajor = ToneFrequencies([261.6256, 329.6276, 391.9954])
+
+    /// 鳴らし始めてから振幅が落ち着くまで回す
+    private func settle(_ synthesizer: inout ToneSynthesizer, samples: Int = 4800) {
+        for _ in 0..<samples {
+            _ = synthesizer.nextSample()
+        }
+    }
+
+    func testToneFrequenciesKeepsUpToThreeValues() {
+        XCTAssertEqual(ToneFrequencies(440).all, [440])
+        XCTAssertEqual(ToneFrequencies(440).count, 1)
+        XCTAssertEqual(ToneFrequencies([220, 330]).all, [220, 330])
+        XCTAssertEqual(Self.cMajor.count, 3)
+        XCTAssertEqual(Self.cMajor[2], 391.9954)
+        XCTAssertEqual(ToneFrequencies(440), ToneFrequencies([440]))
+        XCTAssertNotEqual(ToneFrequencies([440, 550]), ToneFrequencies(440))
+        XCTAssertEqual(ToneFrequencies.maxCount, 3)
+    }
+
+    /// 単音は複数ボイスにしても今までと同じ出力（1 ボイスだけをそのまま鳴らす）
+    func testSingleToneOutputMatchesPlainSineWave() {
+        let sampleRate = 48000.0
+        var synthesizer = ToneSynthesizer(sampleRate: sampleRate, frequency: 440, volume: 1, waveform: .sine)
+        synthesizer.update(frequency: 440, volume: 1, waveform: .sine, isPlaying: true)
+        var generator = ToneGenerator(sampleRate: sampleRate, frequency: 440)
+        var gain = ParameterSmoother(value: 0, sampleRate: sampleRate, timeConstant: ToneSynthesizer.smoothingTime)
+        gain.target = 1
+        for _ in 0..<4800 {
+            let expected = Float(Waveform.sine.value(at: generator.advance()) * gain.next())
+            XCTAssertEqual(synthesizer.nextSample(), expected, accuracy: 1e-6)
+        }
+    }
+
+    func testChordNeverClips() {
+        for waveform in Waveform.allCases {
+            var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: Self.cMajor, volume: 1, waveform: waveform)
+            synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: waveform, isPlaying: true)
+            for _ in 0..<48000 {
+                XCTAssertLessThanOrEqual(abs(synthesizer.nextSample()), 1 + 1e-6, "\(waveform)")
+            }
+        }
+    }
+
+    /// 構成音が同じ位相で重なる（同じ周波数 3 つ）と、単音と同じ振幅 1 になる。3 倍にはならない
+    func testChordIsNormalizedToSingleToneAmplitude() {
+        let unison = ToneFrequencies([440, 440, 440])
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: unison, volume: 1, waveform: .sine)
+        synthesizer.update(frequencies: unison, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        let peak = (0..<109).map { _ in abs(synthesizer.nextSample()) }.max()!
+        XCTAssertEqual(peak, 1, accuracy: 0.01)
+    }
+
+    func testChordScalesByVolume() {
+        let unison = ToneFrequencies([440, 440, 440])
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: unison, volume: 0.25, waveform: .sine)
+        synthesizer.update(frequencies: unison, volume: 0.25, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        let peak = (0..<109).map { _ in abs(synthesizer.nextSample()) }.max()!
+        XCTAssertEqual(peak, 0.25, accuracy: 0.005)
+    }
+
+    func testChordVoicesPlayTheirOwnFrequencies() {
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: Self.cMajor, volume: 1, waveform: .sine)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        XCTAssertEqual(synthesizer.voices.0.generator.frequency, Self.cMajor[0], accuracy: 1e-6)
+        XCTAssertEqual(synthesizer.voices.1.generator.frequency, Self.cMajor[1], accuracy: 1e-6)
+        XCTAssertEqual(synthesizer.voices.2.generator.frequency, Self.cMajor[2], accuracy: 1e-6)
+        XCTAssertEqual(synthesizer.voices.2.level.current, 1, accuracy: 1e-6)
+    }
+
+    func testUnusedVoicesAreSilentForSingleTone() {
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequency: 440, volume: 1, waveform: .sine)
+        synthesizer.update(frequency: 440, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        XCTAssertEqual(synthesizer.voices.1.level.current, 0)
+        XCTAssertEqual(synthesizer.voices.2.level.current, 0)
+    }
+
+    /// 単音 → 和音 → 単音と切り替えても、隣り合うサンプルの差は小さいまま（ボイスの増減で段差を出さない）
+    func testSwitchingBetweenSingleToneAndChordHasNoLargeJump() {
+        let sampleRate = 48000.0
+        // 鳴っている最も高い音（G4、392Hz）より高い 440Hz の正弦波の 1 サンプルの変化量に、レベルの補間の分の余裕を足す
+        let maxStep = Float(2 * Double.pi * 440 / sampleRate) + 0.02
+        var synthesizer = ToneSynthesizer(sampleRate: sampleRate, frequency: 261.6256, volume: 1, waveform: .sine)
+        synthesizer.update(frequency: 261.6256, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        var previous = synthesizer.nextSample()
+        for index in 0..<19200 {
+            if index % 4800 == 0 {
+                if (index / 4800) % 2 == 0 {
+                    synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .sine, isPlaying: true)
+                } else {
+                    synthesizer.update(frequency: 261.6256, volume: 1, waveform: .sine, isPlaying: true)
+                }
+            }
+            let sample = synthesizer.nextSample()
+            XCTAssertLessThanOrEqual(abs(sample - previous), maxStep, "\(index)")
+            previous = sample
+        }
+    }
+
+    /// 和音のまま別の和音へ移ると、各ボイスが位相を保ったまま滑らかに移る
+    func testChordGlidesEachVoiceToNewFrequencies() {
+        let aMinor = ToneFrequencies([220, 261.6256, 329.6276])
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: Self.cMajor, volume: 1, waveform: .sine)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        synthesizer.update(frequencies: aMinor, volume: 1, waveform: .sine, isPlaying: true)
+        _ = synthesizer.nextSample()
+        XCTAssertLessThan(synthesizer.voices.0.generator.frequency, Self.cMajor[0])
+        XCTAssertGreaterThan(synthesizer.voices.0.generator.frequency, aMinor[0])
+        settle(&synthesizer, samples: 2400)
+        XCTAssertEqual(synthesizer.voices.0.generator.frequency, aMinor[0], accuracy: 0.1)
+        XCTAssertEqual(synthesizer.voices.1.generator.frequency, aMinor[1], accuracy: 0.1)
+        XCTAssertEqual(synthesizer.voices.2.generator.frequency, aMinor[2], accuracy: 0.1)
+    }
+
+    /// 単音から和音にしたとき、増えたボイスは前の周波数から滑らせず、目標の周波数でフェードインする
+    func testAddedVoiceStartsAtItsTargetFrequency() {
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequency: 261.6256, volume: 1, waveform: .sine)
+        synthesizer.update(frequency: 261.6256, volume: 1, waveform: .sine, isPlaying: true)
+        settle(&synthesizer)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .sine, isPlaying: true)
+        _ = synthesizer.nextSample()
+        XCTAssertEqual(synthesizer.voices.2.generator.frequency, Self.cMajor[2])
+        XCTAssertLessThan(synthesizer.voices.2.level.current, 0.5)
+    }
+
+    func testChordStartsFromSilenceWithAllVoices() {
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequency: 440, volume: 1, waveform: .sine)
+        // 停止中に和音にしてから鳴らすと、全部のボイスが目標の周波数・レベルで始まる
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .sine, isPlaying: true)
+        _ = synthesizer.nextSample()
+        XCTAssertEqual(synthesizer.voices.0.generator.frequency, Self.cMajor[0])
+        XCTAssertEqual(synthesizer.voices.2.generator.frequency, Self.cMajor[2])
+        XCTAssertEqual(synthesizer.voices.2.level.current, 1)
+    }
+
+    func testChordFadesOutAndBecomesSilentAfterStop() {
+        var synthesizer = ToneSynthesizer(sampleRate: 48000, frequencies: Self.cMajor, volume: 1, waveform: .square)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .square, isPlaying: true)
+        settle(&synthesizer)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .square, isPlaying: false)
+        XCTAssertFalse(synthesizer.isSilent)
+        settle(&synthesizer, samples: 3300)
+        synthesizer.update(frequencies: Self.cMajor, volume: 1, waveform: .square, isPlaying: false)
+        XCTAssertTrue(synthesizer.isSilent)
+    }
+
+    func testAudioManagerKeepsChordFrequencies() {
+        let manager = AudioManager(startsEngine: false)
+        manager.updateFrequencies(Self.cMajor)
+        XCTAssertEqual(manager.currentFrequencies, Self.cMajor)
+        XCTAssertEqual(manager.currentFrequency, Self.cMajor[0])
+        manager.updateFrequency(1000)
+        XCTAssertEqual(manager.currentFrequencies, ToneFrequencies(1000))
+    }
+
     // MARK: - ToneSynthesizer（波形）
 
     func testSynthesizerCrossfadesWaveformWithoutJump() {
@@ -350,6 +519,16 @@ final class OneToneTests: XCTestCase {
     }
     // MARK: - FrequencyInput
 
+    func testDefaultFrequencyIs440AndInRange() {
+        XCTAssertEqual(FrequencyInput.defaultFrequency, 440)
+        XCTAssertTrue(FrequencyInput.range.contains(FrequencyInput.defaultFrequency))
+    }
+
+    func testAudioManagerStartsAtDefaultFrequency() {
+        let manager = AudioManager(startsEngine: false)
+        XCTAssertEqual(manager.currentFrequency, FrequencyInput.defaultFrequency)
+    }
+
     func testFrequencyInputAcceptsValuesInRange() {
         XCTAssertEqual(FrequencyInput.parse("440"), 440)
         XCTAssertEqual(FrequencyInput.parse("20"), 20)
@@ -385,17 +564,48 @@ final class OneToneTests: XCTestCase {
     }
 
     func testFaderMovesUpWhenDraggedUp() {
-        // 溝の長さだけ上へドラッグすると 0% から 100% になる
-        XCTAssertEqual(FaderMapping.volume(from: 0, dragHeight: -Double(FaderMapping.trackHeight)), 1, accuracy: 1e-9)
-        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -Double(FaderMapping.trackHeight) / 4), 0.75, accuracy: 1e-9)
-        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: Double(FaderMapping.trackHeight) / 4), 0.25, accuracy: 1e-9)
-        // 動かさなければ始点のまま（掴んだ位置へ飛ばない）
-        XCTAssertEqual(FaderMapping.volume(from: 0.3, dragHeight: 0), 0.3, accuracy: 1e-9)
+        // iPad・macOS の溝（160pt）でも iPhone の短い溝（100pt）でも、溝の長さだけ上へドラッグすると 0% から 100% になる
+        for trackHeight in [FaderMetrics.standard.trackHeight, FaderMetrics.compactPhone.trackHeight] {
+            let length = Double(trackHeight)
+            XCTAssertEqual(FaderMapping.volume(from: 0, dragHeight: -length, trackHeight: trackHeight), 1, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 1, dragHeight: length, trackHeight: trackHeight), 0, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -length / 4, trackHeight: trackHeight), 0.75, accuracy: 1e-9)
+            XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: length / 4, trackHeight: trackHeight), 0.25, accuracy: 1e-9)
+            // 動かさなければ始点のまま（掴んだ位置へ飛ばない）
+            XCTAssertEqual(FaderMapping.volume(from: 0.3, dragHeight: 0, trackHeight: trackHeight), 0.3, accuracy: 1e-9)
+        }
+    }
+
+    func testFaderDragAmountDependsOnTrackHeight() {
+        // 同じ 40pt のドラッグでも、160pt の溝では 25%、100pt の溝では 40% 動く
+        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -40, trackHeight: 160), 0.75, accuracy: 1e-9)
+        XCTAssertEqual(FaderMapping.volume(from: 0.5, dragHeight: -40, trackHeight: 100), 0.9, accuracy: 1e-9)
+    }
+
+    func testFaderMetricsKeepStandardSizeAndShortenOnPhone() {
+        // iPad と macOS は Discussion #253 より前と同じ寸法（`.padding()` の既定の余白）のまま
+        XCTAssertEqual(FaderMetrics.standard, FaderMetrics(trackHeight: 160, labelSpacing: 8, verticalPadding: nil))
+        // iPhone は PLAY ボタン（120pt）に近づけるため溝を短くし、余白を詰める
+        XCTAssertEqual(FaderMetrics.compactPhone.trackHeight, 100)
+        XCTAssertLessThan(FaderMetrics.compactPhone.labelSpacing, FaderMetrics.standard.labelSpacing)
+        XCTAssertEqual(FaderMetrics.compactPhone.verticalPadding, 0)
+    }
+
+    @MainActor
+    func testFaderMetricsFollowDeviceIdiom() {
+        #if os(iOS)
+        let expected: FaderMetrics = UIDevice.current.userInterfaceIdiom == .phone ? .compactPhone : .standard
+        XCTAssertEqual(FaderMetrics.current, expected)
+        #else
+        XCTAssertEqual(FaderMetrics.current, .standard)
+        #endif
     }
 
     func testFaderStopsAtEnds() {
-        XCTAssertEqual(FaderMapping.volume(from: 0.9, dragHeight: -1000), 1)
-        XCTAssertEqual(FaderMapping.volume(from: 0.1, dragHeight: 1000), 0)
+        for trackHeight in [FaderMetrics.standard.trackHeight, FaderMetrics.compactPhone.trackHeight] {
+            XCTAssertEqual(FaderMapping.volume(from: 0.9, dragHeight: -1000, trackHeight: trackHeight), 1)
+            XCTAssertEqual(FaderMapping.volume(from: 0.1, dragHeight: 1000, trackHeight: trackHeight), 0)
+        }
         XCTAssertEqual(FaderMapping.clamped(1.2), 1)
         XCTAssertEqual(FaderMapping.clamped(-0.2), 0)
     }
@@ -462,5 +672,108 @@ final class OneToneTests: XCTestCase {
             XCTAssertNotNil(parsed, "\(frequency)")
             XCTAssertEqual(parsed!, frequency, accuracy: 0.5)
         }
+    }
+
+    // MARK: - ロゴの書体（LogoFont）
+
+    func testLogoFontDataAssetContainsTheFont() throws {
+        let asset = try XCTUnwrap(NSDataAsset(name: LogoFont.dataAssetName, bundle: .main))
+        let descriptors = try XCTUnwrap(CTFontManagerCreateFontDescriptorsFromData(asset.data as CFData) as? [CTFontDescriptor])
+        let names = descriptors.compactMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
+        XCTAssertEqual(names, [LogoFont.postScriptName])
+    }
+
+    func testLogoFontRegistersAndIsUsableByPostScriptName() {
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        // 代わりの書体（システムの書体）になっていない
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 20, nil)
+        XCTAssertEqual(CTFontCopyPostScriptName(font) as String, LogoFont.postScriptName)
+        XCTAssertEqual(CTFontCopyFamilyName(font) as String, LogoFont.familyName)
+    }
+
+    func testLogoFontRegistrationCanBeCalledTwice() {
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        XCTAssertTrue(LogoFont.isAvailable(postScriptName: LogoFont.postScriptName))
+    }
+
+    func testUnknownFontIsNotAvailable() {
+        // 登録していない名前は代わりの書体になるので、使えないと判定する（フォールバックの判定が効いている）
+        XCTAssertFalse(LogoFont.isAvailable(postScriptName: "OneTone-NoSuchFont"))
+    }
+
+    func testLogoFontLicenseTextIsBundled() throws {
+        let text = try XCTUnwrap(LogoFont.licenseText)
+        XCTAssertFalse(text.isEmpty)
+        XCTAssertTrue(text.contains("SIL OPEN FONT LICENSE Version 1.1"))
+        // 設定画面に出す著作権表示は、全文の 1 行目と同じ
+        XCTAssertEqual(text.components(separatedBy: .newlines).first, LogoFont.copyright)
+    }
+
+    func testLargeLogoSizesAreTriedFromLargest() {
+        // ViewThatFits は先に並べたものから試すので、大きい順に並べる
+        let sizes = Theme.Logo.largeTextSizes
+        XCTAssertEqual(sizes, sizes.sorted(by: >))
+        XCTAssertEqual(Set(sizes).count, sizes.count)
+        XCTAssertGreaterThan(sizes.last ?? 0, 0)
+    }
+
+    func testLogoMarkIsSlightlyTallerThanCapitals() throws {
+        // マークは大文字より高く、文字の大きさ（em）を超えない
+        XCTAssertTrue(LogoFont.registerIfNeeded())
+        let font = CTFontCreateWithName(LogoFont.postScriptName as CFString, 100, nil)
+        let markHeight = 100 * Theme.Logo.markHeightRatio
+        XCTAssertGreaterThan(markHeight, CTFontGetCapHeight(font))
+        XCTAssertLessThanOrEqual(markHeight, 100)
+    }
+
+    func testBarLogoAppearsWhenLargeLogoIsUnderTheBar() {
+        // 大きいロゴの下端がバーの下端に届いたら（隠れたら）出す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 120, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: 100, barBottom: 100, wasShown: false))
+        XCTAssertTrue(BarLogoVisibility.isShown(largeLogoBottom: -300, barBottom: 100, wasShown: false))
+        // 見えるところまで戻ったら消す
+        XCTAssertFalse(BarLogoVisibility.isShown(largeLogoBottom: 100 + Theme.Logo.barLogoHysteresis + 1, barBottom: 100, wasShown: true))
+    }
+
+    func testBarLogoDoesNotFlickerAroundTheEdge() {
+        // 境目の少し下（ゆとりの中）では今の状態を保つので、1pt ずつ行き来しても切り替わらない
+        let edge: CGFloat = 100
+        var shown = false
+        for bottom in [101, 102, 101, 103, 102] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertFalse(shown)
+        }
+        shown = BarLogoVisibility.isShown(largeLogoBottom: edge, barBottom: edge, wasShown: shown)
+        XCTAssertTrue(shown)
+        for bottom in [101, 103, 102, edge + Theme.Logo.barLogoHysteresis, 101] as [CGFloat] {
+            shown = BarLogoVisibility.isShown(largeLogoBottom: bottom, barBottom: edge, wasShown: shown)
+            XCTAssertTrue(shown, "\(bottom)")
+        }
+        XCTAssertGreaterThan(Theme.Logo.barLogoHysteresis, 0)
+    }
+
+    func testLicenseReflowKeepsTextAndParagraphs() throws {
+        let text = try XCTUnwrap(LogoFont.licenseText)
+        let reflowed = LicenseText.reflowed(text)
+        // 改行を空白に変えるだけで、文字は変えない
+        XCTAssertEqual(reflowed.filter { !$0.isWhitespace }, text.filter { !$0.isWhitespace })
+        XCTAssertLessThan(reflowed.components(separatedBy: "\n").count, text.components(separatedBy: "\n").count)
+        // 見出し・番号付きの項目・区切りの線は行頭に残る
+        let lines = reflowed.components(separatedBy: "\n")
+        XCTAssertTrue(lines.contains("PREAMBLE"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("1) Neither the Font Software") })
+        XCTAssertTrue(lines.contains { $0.hasPrefix("SIL OPEN FONT LICENSE Version 1.1") })
+        // 全部大文字の段落（DISCLAIMER の本文）も 1 行につながる
+        XCTAssertTrue(lines.contains("DISCLAIMER"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("THE FONT SOFTWARE IS PROVIDED") && $0.hasSuffix("OTHER DEALINGS IN THE FONT SOFTWARE.") })
+    }
+
+    func testLicenseReflowJoinsOnlyInsideParagraphs() {
+        let text = "TITLE\nfirst line\ncontinues here\n\n1) item one\nwraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS\nBODY\n\nEND"
+        XCTAssertEqual(
+            LicenseText.reflowed(text),
+            "TITLE\nfirst line continues here\n\n1) item one wraps\n2) item two\n-----\nend\n\nHEADING\nALL CAPS BODY\n\nEND"
+        )
     }
 }

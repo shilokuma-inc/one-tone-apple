@@ -10,6 +10,7 @@ import SwiftUI
 struct WaveformPicker: View {
     let waveform: Waveform
     let onChange: (Waveform) -> Void
+    @Environment(\.themeColor) private var themeColor
 
     var body: some View {
         HStack(spacing: 8) {
@@ -21,7 +22,7 @@ struct WaveformPicker: View {
                     VStack(spacing: 6) {
                         WaveformIcon(waveform: candidate)
                             .stroke(
-                                isSelected ? Theme.accent : Theme.textSecondary,
+                                isSelected ? themeColor.accent : Theme.textSecondary,
                                 style: StrokeStyle(lineWidth: isSelected ? 2.5 : 1.5, lineCap: .round, lineJoin: .round)
                             )
                             .frame(width: 36, height: 18)
@@ -48,6 +49,7 @@ struct WaveformPicker: View {
 /// 波形セレクタの 1 つ分の枠。選択中は差し色の太い枠と面の差し色、押している間は少し沈む
 struct WaveformButtonStyle: ButtonStyle {
     let isSelected: Bool
+    @Environment(\.themeColor) private var themeColor
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.cornerRadius)
@@ -55,12 +57,12 @@ struct WaveformButtonStyle: ButtonStyle {
             .background(
                 ZStack {
                     shape.fill(Theme.surfaceRaised)
-                    shape.fill(Theme.accent.opacity((isSelected ? 0.15 : 0) + (configuration.isPressed ? 0.15 : 0)))
+                    shape.fill(themeColor.accent.opacity((isSelected ? 0.15 : 0) + (configuration.isPressed ? 0.15 : 0)))
                 }
             )
             .overlay(
                 shape.strokeBorder(
-                    isSelected ? Theme.accent : Theme.textDisabled.opacity(0.5),
+                    isSelected ? themeColor.accent : Theme.textDisabled.opacity(0.5),
                     lineWidth: isSelected ? 2 : 1
                 )
             )

@@ -51,7 +51,8 @@ struct FrequencyTextField: View {
                 #endif
                 .submitLabel(.done)
                 .onSubmit(onSubmit)
-            Text("Hz")
+            // 単位記号は全言語で同じ表記にする（訳さない）
+            Text(verbatim: "Hz")
         }
         .textFieldStyle(.roundedBorder)
     }

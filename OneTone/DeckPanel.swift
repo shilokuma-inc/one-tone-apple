@@ -7,6 +7,7 @@ import SwiftUI
 
 /// DJ 機材の操作パネルのように、関連する部品を 1 枚の面にまとめる
 struct DeckPanel<Content: View>: View {
+    /// 見出し（FREQUENCY / OUTPUT）。機材の刻印として英語のまま出すので、`String` で受けて訳さない
     let title: String
     @ViewBuilder let content: Content
 

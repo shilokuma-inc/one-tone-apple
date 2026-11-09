@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-"""`AppStore/languages.json` と `AppStore/screenshots.json` を読む共通処理。
+"""`AppStore/languages.json` と `AppStore/screenshots.json`・`AppStore/creative_assets.json` を読む共通処理。
 
 スクリーンショットの撮影（capture_screenshots.sh / capture_mac_screenshots.sh）と
-App Store Connect への反映（upload_screenshots.py / upload_metadata.py）、および
-GitHub Actions のワークフローから使う。設定は 2 つの JSON が単一の定義で、
-ここには「読んで整合を確かめる」以上のことは書かない。
+App Store Connect への反映（upload_screenshots.py / upload_metadata.py / upload_creative_assets.py）、
+クリエイティブアセットの書き出し（render_creative_assets.sh）、および GitHub Actions のワークフローから使う。
+設定はこれらの JSON が単一の定義で、ここには「読んで整合を確かめる」以上のことは書かない。
 
 シェルから使うときはタブ区切りで出す。
 
     python3 Tools/app_store_config.py languages [ja]      # 言語ごとの撮影・反映の設定
+    python3 Tools/app_store_config.py app-languages [ja]  # アプリの対応言語ごとの撮影の設定（チュートリアル画像用）
     python3 Tools/app_store_config.py scenes              # 撮る画面
     python3 Tools/app_store_config.py devices APP_IPHONE_67
     python3 Tools/app_store_config.py sizes APP_IPHONE_67
     python3 Tools/app_store_config.py platform APP_DESKTOP    # IOS / MAC_OS
     python3 Tools/app_store_config.py display-types [APP_IPHONE_67,...]  # GitHub Actions の matrix 用 JSON
+    python3 Tools/app_store_config.py creative-assets     # クリエイティブアセットの layout・ファイル名・寸法
     python3 Tools/app_store_config.py bundle-id
 """
 
@@ -28,7 +30,9 @@ from typing import NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
 LANGUAGES_FILE = ROOT / "AppStore" / "languages.json"
+SUPPORTED_LANGUAGES_FILE = ROOT / "Localization" / "supported-languages.json"
 SCREENSHOTS_FILE = ROOT / "AppStore" / "screenshots.json"
+CREATIVE_ASSETS_FILE = ROOT / "AppStore" / "creative_assets.json"
 PROJECT_FILE = ROOT / "OneTone.xcodeproj" / "project.pbxproj"
 
 #: 1 つの言語・表示サイズに載せられる枚数の上限（App Store Connect の制限）
@@ -61,6 +65,20 @@ class Scene(NamedTuple):
     scene: str
 
 
+class CreativeAsset(NamedTuple):
+    #: creative.html に渡す type（`header` / `search`）
+    layout: str
+    #: AppStore/creative/<言語>/ の下のファイル名
+    file: str
+    #: 書き出す寸法（px）
+    width: int
+    height: int
+    #: App Asset Library の置き場所（PRODUCT_PAGE_HEADER_ASSET など）
+    placement_type: str
+    #: Asset Library に上げるときの名前の頭（言語とバージョンを後ろに付ける）
+    reference_name: str
+
+
 def languages(selected: list[str] | None = None) -> list[Language]:
     """指定した言語（省略時は全言語）の設定を返す。知らない言語を指定したらその場で止める。"""
     entries = json.loads(LANGUAGES_FILE.read_text(encoding="utf-8"))["languages"]
@@ -82,6 +100,37 @@ def languages(selected: list[str] | None = None) -> list[Language]:
         )
         for language in targets
     ]
+
+
+def app_languages(selected: list[str] | None = None) -> list[Language]:
+    """アプリが対応する言語（`Localization/supported-languages.json`）ごとの撮影の設定を返す。
+
+    App Store に載せる言語（`AppStore/languages.json`）とは別に、アプリの UI を訳した全言語を撮るときに使う
+    （チュートリアルの画像）。`languages()` と同じ形で返し、撮影スクリプトはどちらも同じように読める。
+    """
+    config = json.loads(SUPPORTED_LANGUAGES_FILE.read_text(encoding="utf-8"))
+    known = config["languages"]
+    targets = known if selected is None else selected
+
+    unknown = [language for language in targets if language not in known]
+    if unknown:
+        raise SystemExit(
+            f"{SUPPORTED_LANGUAGES_FILE.name} に無い言語: {', '.join(unknown)}\n"
+            f"指定できるのは: {', '.join(known)}"
+        )
+    result = []
+    for language in targets:
+        entry = config["appStore"][language]
+        test_language = entry["testLanguage"]
+        # -AppleLocale は「言語_地域」。pt-BR のように言語コードが地域を含むときは地域を重ねない
+        base = test_language.split("-")[0] if test_language.endswith(f"-{entry['testRegion']}") else test_language
+        result.append(Language(
+            language=language,
+            apple_language=test_language,
+            apple_locale=f"{base}_{entry['testRegion']}",
+            store_locale=entry["storeLocale"],
+        ))
+    return result
 
 
 def _screenshots_config() -> dict:
@@ -138,6 +187,38 @@ def platforms(selected: str | None) -> list[str]:
     return [PLATFORMS[selected]]
 
 
+def _creative_assets_config() -> dict:
+    """`AppStore/creative_assets.json` の中身。"""
+    return json.loads(CREATIVE_ASSETS_FILE.read_text(encoding="utf-8"))
+
+
+def creative_assets() -> list[CreativeAsset]:
+    """クリエイティブアセットの置き場所ごとの、書き出す画像（layout・ファイル名・寸法）と反映先の置き場所。"""
+    return [
+        CreativeAsset(
+            layout=entry["layout"],
+            file=entry["file"],
+            width=int(entry["width"]),
+            height=int(entry["height"]),
+            placement_type=entry["placementType"],
+            reference_name=entry.get("referenceName", entry["placementType"]),
+        )
+        for entry in _creative_assets_config()["assets"]
+    ]
+
+
+def creative_platforms() -> list[str]:
+    """クリエイティブアセットを配置する App Store Connect の platform（`IOS` / `MAC_OS`）。"""
+    names = _creative_assets_config()["platforms"]
+    unknown = [name for name in names if name not in PLATFORMS.values()]
+    if unknown or not names:
+        raise SystemExit(
+            f"{CREATIVE_ASSETS_FILE.name} の platforms が不正です: {names!r}\n"
+            f"指定できるのは: {', '.join(PLATFORMS.values())}"
+        )
+    return names
+
+
 def bundle_id() -> str:
     """アプリの bundle id を project.pbxproj から読む。ワークフローに書き写すと二重管理になるため。
 
@@ -167,16 +248,21 @@ def parse_list(raw: str | None) -> list[str] | None:
 
 
 def main() -> int:
+    """サブコマンドの結果を、シェルから読みやすいタブ区切り（display-types は JSON）で出す。"""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "command",
-        choices=("languages", "scenes", "devices", "sizes", "platform", "display-types", "bundle-id"),
+        choices=(
+            "languages", "app-languages", "scenes", "devices", "sizes", "platform", "display-types",
+            "creative-assets", "bundle-id",
+        ),
     )
     parser.add_argument("argument", nargs="?", default=None)
     args = parser.parse_args()
 
-    if args.command == "languages":
-        for entry in languages(parse_list(args.argument)):
+    if args.command in ("languages", "app-languages"):
+        read = languages if args.command == "languages" else app_languages
+        for entry in read(parse_list(args.argument)):
             print("\t".join(entry))
     elif args.command == "scenes":
         for entry in scenes():
@@ -190,6 +276,9 @@ def main() -> int:
         if not args.argument:
             raise SystemExit("表示サイズ（例: APP_DESKTOP）を指定してください")
         print(platform_for(args.argument))
+    elif args.command == "creative-assets":
+        for entry in creative_assets():
+            print("\t".join([entry.layout, entry.file, str(entry.width), str(entry.height)]))
     elif args.command == "bundle-id":
         print(bundle_id())
     else:

@@ -19,6 +19,8 @@ final class OneToneUITestsLaunchTests: XCTestCase {
 
     func testLaunch() throws {
         let app = XCUIApplication()
+        // 初回起動のチュートリアルで画面が隠れないようにする
+        app.launchArguments.append("-skip-tutorial")
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,

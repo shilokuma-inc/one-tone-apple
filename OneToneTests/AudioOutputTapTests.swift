@@ -37,7 +37,7 @@ final class AudioOutputTapTests: XCTestCase {
             frameCount: frameCount,
             into: UnsafeMutableAudioBufferListPointer(pcmBuffer.mutableAudioBufferList),
             synthesizer: synthesizer,
-            frequency: 440,
+            frequencies: ToneFrequencies(440),
             volume: 0.5,
             waveform: .sine,
             isPlaying: isPlaying,

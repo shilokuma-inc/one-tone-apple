@@ -12,7 +12,9 @@
   "scenes": [
     { "file": "01_sine", "scene": "sine" },
     { "file": "02_square", "scene": "square" },
-    { "file": "03_sawtooth", "scene": "sawtooth" }
+    { "file": "03_sawtooth", "scene": "sawtooth" },
+    { "file": "04_note", "scene": "note" },
+    { "file": "05_chord", "scene": "chord" }
   ],
   "displayTypes": {
     "APP_IPHONE_67": {

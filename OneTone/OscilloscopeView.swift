@@ -15,6 +15,7 @@ struct OscilloscopeView: View {
     /// 直近の出力サンプルを古い順に返す（`AudioManager.latestOutputSamples`）
     let readSamples: (Int) -> [Float]
 
+    @Environment(\.themeColor) private var themeColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.freezesAnimations) private var freezesAnimations
 
@@ -28,11 +29,11 @@ struct OscilloscopeView: View {
                 drawGrid(in: &context, size: size)
                 context.stroke(
                     Oscilloscope.path(for: samples, in: CGRect(origin: .zero, size: size)),
-                    with: .color(isPlaying ? Theme.accent : Theme.textDisabled),
+                    with: .color(isPlaying ? themeColor.accent : Theme.textDisabled),
                     style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                 )
             }
-            .neonGlow(Theme.accent, isActive: isPlaying)
+            .neonGlow(isActive: isPlaying)
         }
         .frame(maxWidth: 440)
         .frame(height: 120)
@@ -42,7 +43,7 @@ struct OscilloscopeView: View {
         .padding(.horizontal)
         .accessibilityElement()
         .accessibilityLabel("Oscilloscope")
-        .accessibilityValue(isPlaying ? "Showing output waveform" : "Silent")
+        .accessibilityValue(isPlaying ? Text("Showing output waveform") : Text("Silent"))
     }
 
     /// 機材の画面らしい目盛り（中央の横線と縦の区切り）

@@ -20,7 +20,7 @@ OneTone（以下「本アプリ」）は、利用者のプライバシーを尊�
 本ポリシーを変更する場合は、このページで内容と最終更新日を更新してお知らせします。
 
 ### お問い合わせ
-本ポリシーに関するお問い合わせは、[GitHub の Issues](https://github.com/shilokuma-inc/one-tone-macos/issues) までお寄せください。
+本ポリシーに関するお問い合わせは、[GitHub の Issues](https://github.com/shilokuma-inc/one-tone-apple/issues) までお寄せください。
 
 ## English
 
@@ -40,4 +40,4 @@ All sound is generated on your device. The App does not access your microphone, 
 If this policy changes, we will update this page, including the "Last updated" date.
 
 ### Contact
-For questions about this policy, please open an issue on [GitHub](https://github.com/shilokuma-inc/one-tone-macos/issues).
+For questions about this policy, please open an issue on [GitHub](https://github.com/shilokuma-inc/one-tone-apple/issues).

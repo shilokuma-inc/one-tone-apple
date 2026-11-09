@@ -20,7 +20,7 @@ on:
         required: false
         default: ''
       languages:
-        description: '撮影する言語（カンマ区切り）。空なら languages.json の全言語（ja）'
+        description: '撮影する言語（カンマ区切り）。空なら languages.json の全言語（12 言語）'
         required: false
         default: ''
       app_version:
@@ -79,7 +79,7 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '26.6'
 
       - name: Checkout
         uses: actions/checkout@v7

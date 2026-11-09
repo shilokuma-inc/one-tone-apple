@@ -14,6 +14,9 @@ set -euo pipefail
 # App Store が受け付ける 2880x1800 のキャンバスに合成する。
 #
 # 出力先: $SCREENSHOTS_DIR/APP_DESKTOP/<言語>/01_sine.png …（既定は build/screenshots）
+#
+# 環境変数 SCENES に「ファイル名<TAB>scene」の行を渡すと、AppStore/screenshots.json の代わりにその画面を撮る
+# （チュートリアル用。Tools/capture_tutorial_screenshots.sh が使う）。そのときは App Store の寸法・枚数の検証をしない
 
 LANGUAGES="${1:-}"
 DISPLAY_TYPE="APP_DESKTOP"
@@ -40,6 +43,12 @@ CONFIG="python3 Tools/app_store_config.py"
 
 # 配布ビルド（Upload ワークフロー）と同じ ad-hoc 署名にするが、App Sandbox は外す。
 # サンドボックス内からは指定した保存先に PNG を書けないため。撮影用のビルドだけで、配布ビルドには影響しない
+# SwiftLint のビルドツールプラグインの信頼確認は、Xcode.app で一度信頼すれば要らない。
+# 信頼確認を飛ばすのは、自分のブランチなど中身を確かめたチェックアウトで SKIP_PACKAGE_PLUGIN_VALIDATION=1 を付けたときだけ
+PLUGIN_OPTIONS=()
+if [ "${SKIP_PACKAGE_PLUGIN_VALIDATION:-0}" = 1 ]; then
+    PLUGIN_OPTIONS+=(-skipPackagePluginValidation)
+fi
 echo "$SCHEME を macOS 向けにビルドします（撮影用・サンドボックス無し）"
 xcodebuild build \
     -project "$PROJECT" \
@@ -48,6 +57,7 @@ xcodebuild build \
     -destination 'platform=macOS' \
     -derivedDataPath "$DERIVED_DATA" \
     -quiet \
+    ${PLUGIN_OPTIONS[@]+"${PLUGIN_OPTIONS[@]}"} \
     CODE_SIGN_STYLE=Manual \
     CODE_SIGN_IDENTITY=- \
     PROVISIONING_PROFILE_SPECIFIER= \
@@ -127,8 +137,10 @@ render_scene() {
 }
 
 # プロセス置換の中で失敗しても set -e では止まらないので、先に取り出しておく
-LANGUAGE_LIST="$($CONFIG languages "$LANGUAGES")"
-SCENE_LIST="$($CONFIG scenes)"
+# 既定は App Store に載せる言語（AppStore/languages.json）。LANGUAGES_COMMAND=app-languages で
+# アプリの対応言語（Localization/supported-languages.json）から選ぶ（チュートリアル用）
+LANGUAGE_LIST="$($CONFIG "${LANGUAGES_COMMAND:-languages}" "$LANGUAGES")"
+SCENE_LIST="${SCENES:-$($CONFIG scenes)}"
 
 while IFS=$'\t' read -r -u 3 language apple_language apple_locale store_locale; do
     destination="$SCREENSHOTS_DIR/$DISPLAY_TYPE/$language"
@@ -150,10 +162,12 @@ done 3< <(printf '%s\n' "$LANGUAGE_LIST")
 # 合成の時点でアルファは無いはずだが、iOS と同じ手順で描き直して確実に RGB にする
 find "$SCREENSHOTS_DIR/$DISPLAY_TYPE" -name '*.png' -print0 | xargs -0 "$TOOLS_BIN/remove_alpha"
 
-# App Store Connect は寸法が 1px でも違えば弾く
-python3 Tools/verify_screenshots.py \
-    --directory "$SCREENSHOTS_DIR/$DISPLAY_TYPE" \
-    --sizes "$($CONFIG sizes "$DISPLAY_TYPE" | paste -sd, -)"
+# App Store Connect は寸法が 1px でも違えば弾く（App Store 用に撮るときだけ）
+if [ -z "${SCENES:-}" ]; then
+    python3 Tools/verify_screenshots.py \
+        --directory "$SCREENSHOTS_DIR/$DISPLAY_TYPE" \
+        --sizes "$($CONFIG sizes "$DISPLAY_TYPE" | paste -sd, -)"
+fi
 
 FINISHED=1
 echo "$SCREENSHOTS_DIR/$DISPLAY_TYPE に保存しました"

@@ -1,0 +1,37 @@
+name: Verify/localizations
+
+# String Catalog は訳が欠けていても黙ってソース言語（英語）にフォールバックするため、
+# 翻訳の欠損は実行するまで気づけない。ここで機械的に落とす。
+# JSON を読むだけなので macOS ランナーもビルドも必要ない。
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  verify:
+    name: localizations
+    runs-on: ubuntu-latest
+    # PR のスクリプトを実行するので、トークンは読み取りだけにする
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check formatting
+        run: python3 Tools/format_string_catalogs.py --check
+
+      - name: Verify translations
+        run: python3 Tools/verify_localizations.py
+
+      - name: Verify App Store metadata
+        # App Store Connect にはつながず、欠損と文字数超過だけ見る。
+        # 上限を超えていると反映のときに弾かれるので、ここで先に落とす。
+        run: python3 Tools/upload_metadata.py --check

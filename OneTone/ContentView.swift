@@ -8,62 +8,370 @@
 import SwiftUI
 
 struct ContentView: View {
+    /// 縦スクロールで送り先にできる部品
+    enum Section: Hashable {
+        case frequency
+    }
+
     @StateObject private var audioManager: AudioManager
     @State private var frequency: Double
     @State private var frequencyText: String
     @State private var volume: Double
     @State private var waveform: Waveform
+    /// 和音モードで鳴らすコード。選ぶたびに保存し、起動時に復元する
+    @State private var chord: Chord
+    /// 選んだテーマ。保存値が無い・読めないときは既定のテーマ
+    @AppStorage(ThemeColor.storageKey) private var storedThemeColor: ThemeColor = .default
+    /// 設定画面で選んだ FREQUENCY パネルの表示モード。保存値が無い・読めないときは Hz
+    @AppStorage(FrequencyMode.storageKey) private var storedFrequencyMode: FrequencyMode = .default
+    private let isScreenshotDemo: Bool
+    /// 撮影モードで撮る画面。表示モードを保存値ではなくシーンから決めるのに使う
+    private let screenshotScene: ScreenshotDemo.Scene?
+    /// 周波数・音量・波形の保存先。撮影モードでは読み書きしないので nil
+    private let settingsStore: ToneSettingsStore?
+    #if os(iOS)
+    @State private var isShowingSettings = false
+    /// iOS 26 以上のバーに小さいロゴを出しているか（大きいロゴがバーの下に隠れているか）
+    @State private var showsBarLogo = false
+    /// スクロールの中身の上端から測った大きいロゴの下端（pt）
+    @State private var largeLogoBottom: CGFloat = .greatestFiniteMagnitude
+    #endif
+    /// スクロールの中身の座標空間の名前
+    private static let deckContentSpace = "deckContent"
+    /// チュートリアルを閉じたことがあるか。Skip / 完了 / 閉じる のどれでも立てる
+    @AppStorage(Tutorial.hasSeenKey) private var hasSeenTutorial = false
+    @State private var isShowingTutorial = false
+    /// 起動時に保存された音量を上限まで下げたので、まだ知らせていない。チュートリアルと重なるときは閉じてから出す
+    @State private var hasPendingVolumeCapNotice: Bool
+    @State private var isShowingVolumeCapNotice = false
+    /// 撮影モードで、開いた直後に見える位置まで送る部品
+    private let initialScrollTarget: Section?
 
     /// - Parameter screenshotScene: スクリーンショットの撮影モードで撮る画面。渡すと、その周波数・波形・音量を初期値にし、
     ///   音を出さずに再生中の表示にする。画面を出さずに描く経路でも使えるよう、`.task` ではなく初期値で状態を作る
-    init(screenshotScene: ScreenshotDemo.Scene? = ScreenshotDemo.scene) {
-        let initialFrequency = screenshotScene?.frequency ?? 20.0
-        _audioManager = StateObject(wrappedValue: AudioManager.forScreenshot(screenshotScene))
-        _frequency = State(initialValue: initialFrequency)
-        _frequencyText = State(initialValue: FrequencyInput.format(initialFrequency))
-        _volume = State(initialValue: screenshotScene?.volume ?? 0.5)
-        _waveform = State(initialValue: screenshotScene?.waveform ?? .sine)
+    /// - Parameter defaults: 周波数・音量・波形の保存先。撮影モード以外では、ここに保存した値を初期値にする
+    init(screenshotScene: ScreenshotDemo.Scene? = ScreenshotDemo.scene, defaults: UserDefaults = .standard) {
+        let store = ToneSettingsStore.forLaunch(screenshotScene: screenshotScene, defaults: defaults)
+        let restoration = ToneSettings.initial(screenshotScene: screenshotScene, store: store)
+        // 表示モードも同じ保存先から読む（画面の `@AppStorage` と起動時の読み出しをそろえる）
+        _storedFrequencyMode = AppStorage(wrappedValue: .default, FrequencyMode.storageKey, store: defaults)
+        let launchMode = FrequencyMode.displayed(stored: FrequencyMode.stored(in: defaults), screenshotScene: screenshotScene)
+        // 音名モードで起動するときは、保存された周波数を最寄りの半音にそろえてから鳴らす
+        let initial = restoration.settings.prepared(for: launchMode)
+        // `StateObject` の自動クロージャの中で作る（View の寿命で 1 回だけ作られ、init が呼び直されても余分に作らない）
+        _audioManager = StateObject(wrappedValue: {
+            let manager = AudioManager.forLaunch(screenshotScene: screenshotScene, settings: initial)
+            // 和音モードで起動するときは、復元したコードの構成音を鳴らす準備をしておく
+            if launchMode == .chord {
+                manager.updateFrequencies(initial.frequencies(for: launchMode))
+            }
+            return manager
+        }())
+        _chord = State(initialValue: initial.chord)
+        _frequency = State(initialValue: initial.frequency)
+        _frequencyText = State(initialValue: FrequencyInput.format(initial.frequency))
+        _volume = State(initialValue: initial.volume)
+        _waveform = State(initialValue: initial.waveform)
+        settingsStore = store
+        _hasPendingVolumeCapNotice = State(initialValue: restoration.volumeWasCapped)
+        isScreenshotDemo = screenshotScene != nil
+        self.screenshotScene = screenshotScene
+        initialScrollTarget = screenshotScene?.scrollTarget
     }
     
+    /// 画面に使うテーマ。メイン画面とチュートリアルのシートで同じものを使う
+    private var displayedThemeColor: ThemeColor {
+        ThemeColor.displayed(stored: storedThemeColor, isScreenshotDemo: isScreenshotDemo)
+    }
+
     var body: some View {
-        // 幅で並べ方だけを変え、狭い画面では縦にスクロールして部品が切れないようにする
-        GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 16) {
-                    TitleView(isPlaying: audioManager.isPlaying)
-                        .padding(.top)
-                    
-                    OscilloscopeView(isPlaying: audioManager.isPlaying, readSamples: audioManager.latestOutputSamples)
-                        .frame(maxWidth: DeckLayout.panelMaxWidth * 2)
-                    
-                    if DeckLayout.isSideBySide(width: proxy.size.width) {
-                        HStack(alignment: .top, spacing: 16) {
-                            frequencyPanel
-                            outputPanel
-                        }
-                    } else {
-                        VStack(spacing: 16) {
-                            outputPanel
-                            frequencyPanel
-                        }
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-            }
-            #if os(iOS)
-            // 数値入力のキーボードをスクロールで閉じられるようにする（確定は従来どおり onSubmit）
-            .scrollDismissesKeyboard(.interactively)
-            #endif
-        }
+        mainScreen
         #if os(macOS)
         .frame(minWidth: DeckLayout.minimumWindowSize.width, minHeight: DeckLayout.minimumWindowSize.height)
         #endif
         .themedScreen()
+        .environment(\.themeColor, displayedThemeColor)
+        // 設定画面でモードを切り替えたら、パネルと鳴らす音を切り替える（再生は止めない）。
+        // 音名モードへは最寄りの半音にそろえ、和音モードへは選んでいるコードを、和音モードから出るときは単音に戻す
+        .onValueChange(of: frequencyMode) { mode in
+            let prepared = currentSettings.prepared(for: mode)
+            if prepared.frequency != frequency {
+                setFrequency(prepared.frequency)
+            }
+            audioManager.updateFrequencies(prepared.frequencies(for: mode))
+        }
+        #if os(iOS)
+        .sheet(isPresented: $isShowingSettings) {
+            NavigationStack {
+                SettingsView()
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { isShowingSettings = false }
+                        }
+                    }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        #endif
+        // シートを下へスワイプして閉じたときも、閉じる操作として既読にする
+        .sheet(isPresented: $isShowingTutorial, onDismiss: {
+            finishTutorial(.closed)
+            // シートが閉じ切ってから出す（シートを出している間はダイアログを重ねて出せない）
+            presentPendingVolumeCapNotice()
+        }) {
+            TutorialView(onDismiss: finishTutorial)
+                // シートは `.environment` より外で付けているので、中身にテーマを渡し直す（渡さないと既定のテーマになる）
+                .environment(\.themeColor, displayedThemeColor)
+        }
+        .alert(Text(VolumeCapNotice.title), isPresented: $isShowingVolumeCapNotice) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(VolumeCapNotice.message)
+        }
+        // 設定画面（macOS は別ウィンドウ、iOS はシート）で既定値に戻したら、表示と再生中の音も戻す。再生は止めない
+        .onReceive(NotificationCenter.default.publisher(for: ToneSettingsStore.didResetNotification)) { notification in
+            guard let settingsStore, notification.object as? UserDefaults === settingsStore.defaults else { return }
+            show(.default)
+        }
+        .onAppear {
+            // 初回起動時だけ自動で出す（撮影モードと -skip-tutorial 付きの起動では出さない）
+            if Tutorial.shouldPresentAutomatically(hasSeen: hasSeenTutorial) {
+                openTutorial()
+            } else {
+                presentPendingVolumeCapNotice()
+            }
+        }
     }
+
+    /// ロゴ・波形・パネルを並べたスクロール。iOS 26 以上のバーと、それより前・macOS の角のボタンの両方で使う
+    private var deck: some View {
+        // 幅で並べ方だけを変え、狭い画面では縦にスクロールして部品が切れないようにする
+        GeometryReader { proxy in
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(spacing: 16) {
+                        TitleView(isPlaying: audioManager.isPlaying, sound: logoSound)
+                            #if os(iOS)
+                            // スクロールの中身の上端から測った大きいロゴの下端（スクロールしても変わらない）。バーの小さいロゴの出し入れに使う
+                            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.deckContentSpace)).maxY } action: { bottom in
+                                largeLogoBottom = bottom
+                            }
+                            #endif
+                            .padding(.top)
+                    
+                        OscilloscopeView(isPlaying: audioManager.isPlaying, readSamples: audioManager.latestOutputSamples)
+                            .frame(maxWidth: DeckLayout.panelMaxWidth * 2)
+                    
+                        if DeckLayout.isSideBySide(width: proxy.size.width) {
+                            HStack(alignment: .top, spacing: 16) {
+                                frequencyPanel
+                                outputPanel
+                            }
+                        } else {
+                            VStack(spacing: 16) {
+                                outputPanel
+                                frequencyPanel
+                                    .id(Section.frequency)
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .coordinateSpace(name: Self.deckContentSpace)
+                }
+                #if os(iOS)
+                // 数値入力のキーボードをスクロールで閉じられるようにする（確定は従来どおり onSubmit）
+                .scrollDismissesKeyboard(.interactively)
+                // 中身の上端（バーの下端に合っている位置）からスクロールした量。大きいロゴがバーの下に隠れたら、バーに小さいロゴを出す（iOS 26 以上のバーで使う）
+                .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, scrolled in
+                    showsBarLogo = BarLogoVisibility.isShown(
+                        largeLogoBottom: largeLogoBottom - scrolled,
+                        barBottom: 0,
+                        wasShown: showsBarLogo
+                    )
+                }
+                #endif
+                .onAppear {
+                    // 撮影モードで、画面の下の方にある部品（縦積みの FREQUENCY パネル）を写す
+                    if let initialScrollTarget {
+                        scrollProxy.scrollTo(initialScrollTarget, anchor: .top)
+                    }
+                }
+            }
+        }
+    }
+
+    /// iOS 26 以上はバー（`NavigationStack` のツールバー）に「？」・歯車・小さいロゴを置き、それより前の iOS と macOS は画面の角にボタンを重ねる（Discussion #262 Q5〜Q7）
+    @ViewBuilder
+    private var mainScreen: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            barredScreen
+        } else {
+            overlaidScreen
+        }
+        #else
+        overlaidScreen
+        #endif
+    }
+
+    /// 「？」と歯車を画面の角に重ねる（iOS 26 より前と macOS。バーは出さない）
+    private var overlaidScreen: some View {
+        deck
+            .overlay(alignment: .topLeading) {
+                TutorialButton(action: openTutorial)
+            }
+            // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
+            .overlay(alignment: .topTrailing) {
+                if !isScreenshotDemo {
+                    settingsButton
+                }
+            }
+    }
+
+    #if os(iOS)
+    /// iOS 26 以上のバー。左に「？」、右に歯車、真ん中に大きいロゴが隠れたときだけ小さいロゴを出す。
+    /// バーとボタンの見た目（Liquid Glass・スクロールの端の効果）はシステムに任せる
+    @available(iOS 26.0, *)
+    private var barredScreen: some View {
+        NavigationStack {
+            deck
+                .background(Theme.background.ignoresSafeArea())
+                .navigationBarTitleDisplayMode(.inline)
+                // システムの既定（soft）では、バーの下に部品の文字がはっきり透けて小さいロゴと重なる。hard にして、バーの帯として見えるようにする
+                .scrollEdgeEffectStyle(.hard, for: .top)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: openTutorial) {
+                            Image(systemName: "questionmark.circle")
+                        }
+                        .accessibilityLabel("Show Tutorial")
+                    }
+                    ToolbarItem(placement: .principal) {
+                        BarLogo(isShown: showsBarLogo)
+                    }
+                    // 撮影モードではスクリーンショットの見た目を変えないよう、設定ボタンを出さない
+                    if !isScreenshotDemo {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                isShowingSettings = true
+                            } label: {
+                                Image(systemName: "gearshape")
+                            }
+                            .accessibilityLabel("Settings")
+                        }
+                    }
+                }
+        }
+    }
+    #endif
+
+    /// 起動時に音量を下げたことを 1 度だけ知らせる
+    private func presentPendingVolumeCapNotice() {
+        guard hasPendingVolumeCapNotice else { return }
+        hasPendingVolumeCapNotice = false
+        isShowingVolumeCapNotice = true
+    }
+
+    /// チュートリアルを開く。説明を聞いている間に鳴り続けないよう、メイン画面の音は止める
+    private func openTutorial() {
+        audioManager.stopTone()
+        isShowingTutorial = true
+    }
+
+    /// チュートリアルを閉じる。閉じ方によらず既読にする（表示しただけでは既読にしない）
+    private func finishTutorial(_ dismissal: TutorialDismissal) {
+        if dismissal.marksAsSeen {
+            hasSeenTutorial = true
+        }
+        isShowingTutorial = false
+    }
+
+    #if os(iOS)
+    /// 設定（シート）を開くボタン。タイトルと重ならないよう画面の右上に置く
+    private var settingsButton: some View {
+        Button {
+            isShowingSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Settings")
+        .padding(.trailing, 4)
+    }
+    #elseif os(macOS)
+    /// 設定ウィンドウ（⌘, と同じ `Settings` シーン）を開くボタン。左上の「？」と大きさ・余白をそろえて右上に置く。
+    /// `SettingsLink` は macOS 14 からなので、macOS 13 では出さない（アプリのメニューの「設定…」（⌘,）から開く）
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14.0, *) {
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.system(size: TutorialButtonLayout.iconSize, weight: .regular))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: TutorialButtonLayout.hitSize, height: TutorialButtonLayout.hitSize)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(TutorialButtonLayout.margin)
+            .accessibilityLabel("Settings")
+            .help("Settings")
+        }
+    }
+    #endif
     
-    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    /// 画面に使う表示モード。撮影モードでは保存値に関わらずシーンのモードで撮る
+    private var frequencyMode: FrequencyMode {
+        FrequencyMode.displayed(stored: storedFrequencyMode, screenshotScene: screenshotScene)
+    }
+
+    /// 周波数を決める部品。選んだモードの操作だけを出す（Discussion #219 Q3）
+    @ViewBuilder
     private var frequencyPanel: some View {
+        switch frequencyMode {
+        case .hertz:
+            hertzPanel
+        case .note:
+            notePanel
+        case .chord:
+            chordPanel
+        }
+    }
+
+    /// 和音で決める部品（コード名と構成音の表示・よく使うコードのパッド・根音と種類の組み合わせ）。単一の周波数のノブ・スライダー・Hz の操作は出さない
+    private var chordPanel: some View {
+        DeckPanel(title: "FREQUENCY") {
+            ChordDisplay(chord: chord)
+
+            ChordPadButtons(chord: chord, onSelect: setChord)
+
+            ChordBuilder(chord: chord, onSelect: setChord)
+        }
+    }
+
+    /// 音名で決める部品（半音にスナップするノブ・音名の表示・スライダー・音名の選択・プリセット）。Hz の数値入力とプリセットは出さない
+    private var notePanel: some View {
+        let note = NoteInput.note(for: frequency)
+        return DeckPanel(title: "FREQUENCY") {
+            FrequencyKnob(frequency: frequency, scale: .semitone, onChange: setFrequency)
+
+            NoteDisplay(note: note)
+
+            NoteSlider(note: note, onChange: setNote)
+
+            NotePicker(note: note, onChange: setNote)
+
+            NotePresetButtons(note: note, onSelect: setNote)
+        }
+    }
+
+    /// 周波数を決める部品（ノブ・表示・スライダー・数値入力・プリセット）
+    private var hertzPanel: some View {
         DeckPanel(title: "FREQUENCY") {
             FrequencyKnob(frequency: frequency, onChange: setFrequency)
             
@@ -83,7 +391,7 @@ struct ContentView: View {
             HStack(alignment: .center, spacing: 8) {
                 PlaybackControls(
                     isPlaying: audioManager.isPlaying,
-                    onPlay: { audioManager.playTone(frequency: frequency) },
+                    onPlay: play,
                     onStop: { audioManager.stopTone() }
                 )
                 .frame(maxWidth: .infinity)
@@ -102,18 +410,58 @@ struct ContentView: View {
         frequency = newFrequency
         frequencyText = FrequencyInput.format(newFrequency)
         audioManager.updateFrequency(newFrequency)
+        settingsStore?.save(frequency: newFrequency)
     }
     
+    private func setNote(_ note: MusicalNote) {
+        setFrequency(note.frequency)
+    }
+
+    /// 再生中なら構成音へ滑らかに移る
+    private func setChord(_ newChord: Chord) {
+        chord = newChord
+        audioManager.updateFrequencies(ChordInput.frequencies(of: newChord))
+        settingsStore?.save(chord: newChord)
+    }
+
+    /// ロゴのマークを動かす音の値（鳴らしているものと同じ周波数・音量・波形）
+    private var logoSound: LogoSound {
+        LogoSound(frequencies: currentSettings.frequencies(for: frequencyMode), volume: volume, waveform: waveform)
+    }
+
+    /// 今の画面の設定（保存する値と同じ組み合わせ）
+    private var currentSettings: ToneSettings {
+        ToneSettings(frequency: frequency, volume: volume, waveform: waveform, chord: chord)
+    }
+
+    /// 和音モードではコードの構成音を、それ以外は今の周波数を鳴らす
+    private func play() {
+        audioManager.playTone(frequencies: currentSettings.frequencies(for: frequencyMode))
+    }
+
     private func setVolume(_ newVolume: Double) {
         volume = newVolume
         audioManager.updateVolume(newVolume)
+        settingsStore?.save(volume: newVolume)
     }
     
     private func setWaveform(_ newWaveform: Waveform) {
         waveform = newWaveform
         audioManager.updateWaveform(newWaveform)
+        settingsStore?.save(waveform: newWaveform)
     }
     
+    /// 表示と音に反映する。保存はしない（既定値に戻したときは保存値を消したままにする）
+    private func show(_ settings: ToneSettings) {
+        frequency = settings.frequency
+        frequencyText = FrequencyInput.format(settings.frequency)
+        volume = settings.volume
+        waveform = settings.waveform
+        // RESET ではモードが Hz に戻るので、和音モードで選んでいたコードも既定（C）に戻る
+        chord = settings.chord
+        audioManager.apply(settings)
+    }
+
     /// 範囲外や数値でない入力は反映せず、入力欄を現在の周波数に戻す
     private func submitFrequencyText() {
         if let newFrequency = FrequencyInput.parse(frequencyText) {
@@ -128,6 +476,8 @@ struct ContentView: View {
 enum FrequencyInput {
     /// 可聴域に合わせた入力可能な範囲（スライダーと同じ）
     static let range: ClosedRange<Double> = 20...20000
+    /// 起動直後の周波数。聞き取りやすい基準音（A4）にする
+    static let defaultFrequency: Double = 440
     static let presets: [Double] = [100, 440, 1000, 10000]
 
     /// 入力文字列を周波数に変換する。数値でない・範囲外の場合は nil
@@ -148,12 +498,24 @@ enum FrequencyInput {
         format(preset) == format(frequency)
     }
 
-    /// プリセットボタンの表記。1kHz 以上は kHz で表す
+    /// プリセットボタンの表記。1kHz 以上は kHz で表す。単位の付け方は言語ごとの書式（catalog）に任せる
     static func presetLabel(_ frequency: Double) -> String {
         if frequency >= 1000 {
-            return "\(format(frequency / 1000)) kHz"
+            return String(localized: "\(format(frequency / 1000)) kHz")
         }
-        return "\(format(frequency)) Hz"
+        return String(localized: "\(format(frequency)) Hz")
+    }
+}
+
+extension View {
+    /// 値が変わったときに呼ぶ。`onChange(of:)` は iOS 17 / macOS 14 で引数が変わったので、macOS 13 と両方で警告なく使えるよう分ける
+    @ViewBuilder
+    func onValueChange<Value: Equatable>(of value: Value, perform action: @escaping (Value) -> Void) -> some View {
+        if #available(iOS 17.0, macOS 14.0, *) {
+            onChange(of: value) { _, newValue in action(newValue) }
+        } else {
+            onChange(of: value, perform: action)
+        }
     }
 }
 

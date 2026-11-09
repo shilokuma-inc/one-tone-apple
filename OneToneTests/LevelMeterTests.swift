@@ -47,9 +47,40 @@ final class LevelMeterTests: XCTestCase {
         XCTAssertEqual(LevelMeter.label(decibels: -0.4), "0 dB")
     }
 
-    func testOnlyTopSegmentsUseWarningColor() {
-        // 上端の -6dB より大きい 2 セグメントだけが警告色
-        let warning = (0..<LevelMeter.segmentCount).filter { LevelMeter.segmentColor($0) == Theme.accentSecondary }
-        XCTAssertEqual(warning, [18, 19])
+    func testTopSegmentIsThemeAccent() {
+        for theme in ThemeColor.allCases {
+            XCTAssertEqual(LevelMeter.segmentHex(LevelMeter.segmentCount - 1, accentHex: theme.accentHex), theme.accentHex, "\(theme)")
+            XCTAssertEqual(LevelMeter.segmentColor(LevelMeter.segmentCount - 1, theme: theme), theme.accent, "\(theme)")
+        }
+    }
+
+    func testSegmentsGetDeeperToTheRight() {
+        // 左ほど淡く、右ほど濃い（Q1 の A）。消灯の色との差（相対輝度）が右へ行くほど増える
+        for theme in ThemeColor.allCases {
+            let luminances = (0..<LevelMeter.segmentCount).map {
+                ColorContrast.relativeLuminance(LevelMeter.segmentHex($0, accentHex: theme.accentHex))
+            }
+            for index in 1..<luminances.count {
+                XCTAssertGreaterThan(luminances[index], luminances[index - 1], "\(theme) \(index)")
+            }
+            XCTAssertGreaterThan(luminances[0], ColorContrast.relativeLuminance(Theme.surfaceRaisedHex), "\(theme)")
+        }
+    }
+
+    func testFaintestSegmentStandsOutFromUnlit() {
+        // いちばん淡いセグメントでも消灯と見分けられる。基準（minimumLitContrast）は緩めない
+        for theme in ThemeColor.allCases {
+            let faintest = LevelMeter.segmentHex(0, accentHex: theme.accentHex)
+            XCTAssertGreaterThanOrEqual(ColorContrast.ratio(faintest, Theme.surfaceRaisedHex), LevelMeter.minimumLitContrast, "\(theme)")
+        }
+        XCTAssertGreaterThanOrEqual(LevelMeter.minimumLitContrast, 1.5)
+    }
+
+    func testColorDependsOnlyOnPosition() {
+        // 濃さは位置で決まる。左端は faintestAccentRatio、右端は 1 で、範囲の外の位置は端に寄せる
+        XCTAssertEqual(LevelMeter.accentRatio(0), LevelMeter.faintestAccentRatio, accuracy: 1e-9)
+        XCTAssertEqual(LevelMeter.accentRatio(LevelMeter.segmentCount - 1), 1, accuracy: 1e-9)
+        XCTAssertEqual(LevelMeter.accentRatio(-1), LevelMeter.accentRatio(0), accuracy: 1e-9)
+        XCTAssertEqual(LevelMeter.accentRatio(LevelMeter.segmentCount), 1, accuracy: 1e-9)
     }
 }

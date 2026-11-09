@@ -11,6 +11,9 @@ set -euo pipefail
 # （アプリ側は OneTone/ScreenshotDemo.swift）。1 回ビルドしたものを使い回す。
 #
 # 出力先: $SCREENSHOTS_DIR/<表示サイズ>/<言語>/01_sine.png …（既定は build/screenshots）
+#
+# 環境変数 SCENES に「ファイル名<TAB>scene」の行を渡すと、AppStore/screenshots.json の代わりにその画面を撮る
+# （チュートリアル用。Tools/capture_tutorial_screenshots.sh が使う）。そのときは App Store の寸法・枚数の検証をしない
 
 DISPLAY_TYPE="${1:?表示サイズ（例: APP_IPHONE_67）を指定してください}"
 LANGUAGES="${2:-}"
@@ -115,6 +118,12 @@ xcrun simctl status_bar "$UDID" override \
 
 # MARK: - ビルド
 
+# SwiftLint のビルドツールプラグインの信頼確認は、Xcode.app で一度信頼すれば要らない。
+# 信頼確認を飛ばすのは、自分のブランチなど中身を確かめたチェックアウトで SKIP_PACKAGE_PLUGIN_VALIDATION=1 を付けたときだけ
+PLUGIN_OPTIONS=()
+if [ "${SKIP_PACKAGE_PLUGIN_VALIDATION:-0}" = 1 ]; then
+    PLUGIN_OPTIONS+=(-skipPackagePluginValidation)
+fi
 echo "$SCHEME をビルドします"
 xcodebuild build \
     -project "$PROJECT" \
@@ -123,6 +132,7 @@ xcodebuild build \
     -destination "platform=iOS Simulator,id=$UDID" \
     -derivedDataPath "$DERIVED_DATA" \
     -quiet \
+    ${PLUGIN_OPTIONS[@]+"${PLUGIN_OPTIONS[@]}"} \
     CODE_SIGNING_ALLOWED=NO
 
 SETTINGS="$(xcodebuild -showBuildSettings \
@@ -174,7 +184,10 @@ capture_when_settled() {
 }
 
 # プロセス置換の中で失敗しても set -e では止まらず、前回の撮影結果のまま検証を通ってしまうので、先に取り出しておく
-LANGUAGE_LIST="$($CONFIG languages "$LANGUAGES")"
+# 既定は App Store に載せる言語（AppStore/languages.json）。LANGUAGES_COMMAND=app-languages で
+# アプリの対応言語（Localization/supported-languages.json）から選ぶ（チュートリアル用）
+LANGUAGE_LIST="$($CONFIG "${LANGUAGES_COMMAND:-languages}" "$LANGUAGES")"
+SCENE_LIST="${SCENES:-$($CONFIG scenes)}"
 
 # simctl が標準入力を読んでしまわないよう、一覧は別のファイル記述子から読む
 while IFS=$'\t' read -r -u 3 language apple_language apple_locale store_locale; do
@@ -193,7 +206,7 @@ while IFS=$'\t' read -r -u 3 language apple_language apple_locale store_locale; 
             -AppleLocale "$apple_locale" >/dev/null
         capture_when_settled "$destination/$file.png"
         echo "  $file.png"
-    done 4< <($CONFIG scenes)
+    done 4< <(printf '%s\n' "$SCENE_LIST")
     echo "::endgroup::"
 done 3< <(printf '%s\n' "$LANGUAGE_LIST")
 xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
@@ -206,10 +219,12 @@ xcrun swiftc -O Tools/remove_alpha.swift -o "$REMOVE_ALPHA"
 find "$SCREENSHOTS_DIR/$DISPLAY_TYPE" -name '*.png' -print0 | xargs -0 "$REMOVE_ALPHA"
 
 # App Store Connect は寸法が 1px でも違えば弾く。
-# アップロードまで進んでから落ちると原因が遠くなるので、撮った時点で確かめる
-python3 Tools/verify_screenshots.py \
-    --directory "$SCREENSHOTS_DIR/$DISPLAY_TYPE" \
-    --sizes "$($CONFIG sizes "$DISPLAY_TYPE" | paste -sd, -)"
+# アップロードまで進んでから落ちると原因が遠くなるので、撮った時点で確かめる（App Store 用に撮るときだけ）
+if [ -z "${SCENES:-}" ]; then
+    python3 Tools/verify_screenshots.py \
+        --directory "$SCREENSHOTS_DIR/$DISPLAY_TYPE" \
+        --sizes "$($CONFIG sizes "$DISPLAY_TYPE" | paste -sd, -)"
+fi
 
 FINISHED=1
 echo "$SCREENSHOTS_DIR/$DISPLAY_TYPE に保存しました"
