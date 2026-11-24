@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "project": "OneTone.xcodeproj",
+  "scheme": "OneTone",
+  "platforms": ["iOS", "macOS"],
+  "uiTests": "OneToneUITests",
+  "archive": { "platforms": ["iOS", "macOS"] },
+  "unmanaged": [".swiftlint.yml"]
+}
