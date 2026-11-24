@@ -1,11 +1,11 @@
 name: Archive
 
-# Release 構成の Archive は統合ブランチの epic/** だけで確認する。
-# 作業ブランチの push ごとに走らせると macOS ランナーの枠（同時 5 ジョブ）を埋めるため、作業ブランチは Build だけにする
+# Release 構成の Archive は、AskHub の作業ブランチ askhub/<epic の id>（子 PR を集めて最終 PR で develop に取り込む）だけで確認する。
+# 子 PR のブランチやフィーチャーブランチの push ごとに走らせると macOS ランナーの枠（同時 5 ジョブ）を埋めるため、それらは Build だけにする
 on:
   push:
     branches:
-      - 'epic/**'
+      - 'askhub/*'
 
 concurrency:
   group: archive-working-${{ github.ref }}
@@ -13,6 +13,8 @@ concurrency:
 
 jobs:
   archive:
+    # 子 PR のブランチ（askhub/<epic の id>-<タスク>）と、AskHub の準備・版の上げのブランチ（askhub/setup-workflows など）は名前に - を含むので除く
+    if: ${{ !contains(github.ref_name, '-') }}
     name: working (${{ matrix.platform }})
     runs-on: macos-latest
 
