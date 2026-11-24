@@ -9,8 +9,9 @@ import XCTest
 
 final class OneToneUITestsLaunchTests: XCTestCase {
 
+    // UI の構成（言語・外観・向き）ごとに流すと 286 回・iOS で 40 分ほどかかり、CI の Build（45 分で打ち切り）に収まらないので、1 回だけ流す
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
