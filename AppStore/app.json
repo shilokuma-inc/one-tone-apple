@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "App Store 用のスクリーンショットの撮影で使うアプリの設定（app-kit の撮影のワークフローが読む）。",
+    "project / scheme: 撮影でビルドするプロジェクトと Scheme。",
+    "configuration: 撮影でビルドする構成。今の Tools/capture_screenshots.sh と同じ Debug にする（撮影モードの -screenshot-animate は Debug でだけ効く）。",
+    "Bundle ID は project.pbxproj の PRODUCT_BUNDLE_IDENTIFIER から読む（ここに bundleId を書けばそちらを使う）。",
+    "app-kit の撮影は iOS の表示サイズだけを撮る。Mac（APP_DESKTOP）は撮れないので、AskHub の撮影では頼まない。",
+    "screenshotDemoSource は書かない。app-kit の道具は `enum Scene: String {` の形だけを探し、OneTone の `enum Scene: String, CaseIterable {` を読めないため。"
+  ],
+  "project": "OneTone.xcodeproj",
+  "scheme": "OneTone",
+  "configuration": "Debug",
+  "simulatorPrefix": "OneTone"
+}
